@@ -173,37 +173,15 @@ window.addEventListener('online',  updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 updateOnlineStatus();
 
-// ── 6. BOTTOM NAVIGATION ───────────────────────────────────
-function initNavigation() {
-  const page = window.location.pathname.split('/').pop() || 'index.html';
-
-  document.querySelectorAll('.nav-item[data-page]').forEach(item => {
-    if (item.dataset.page === page) item.classList.add('active');
-
-    let pressTimer;
-    const tooltip = item.querySelector('.nav-tooltip');
-
-    item.addEventListener('pointerdown', () => {
-      pressTimer = setTimeout(() => {
-        if (tooltip) tooltip.classList.add('visible');
-      }, 500);
-    });
-    item.addEventListener('pointerup', () => {
-      clearTimeout(pressTimer);
-      if (tooltip) setTimeout(() => tooltip.classList.remove('visible'), 900);
-    });
-    item.addEventListener('pointerleave', () => clearTimeout(pressTimer));
-  });
-
-  // Modal xidh markii browser back la dhufo
-  window.addEventListener('popstate', () => {
-    const openModalEl = document.querySelector('.modal-overlay.open');
-    if (openModalEl) {
-      closeModal(openModalEl.id);
-      history.pushState(null, '', window.location.href);
-    }
-  });
-}
+// ── 6. BOTTOM NAVIGATION — nav.js ayaa xukuma ─────────────
+// Modal xidh markii browser back la dhufo
+window.addEventListener('popstate', () => {
+  const openModalEl = document.querySelector('.modal-overlay.open');
+  if (openModalEl) {
+    closeModal(openModalEl.id);
+    history.pushState(null, '', window.location.href);
+  }
+});
 
 // ── 7. AUTH GUARD ──────────────────────────────────────────
 function authGuard(requireAuth, redirectTo = 'dashboard.html') {
@@ -367,7 +345,6 @@ async function handleLogin(e) {
   try {
     const cred = await signInWithEmailAndPassword(auth, email, password);
 
-    // Cache kaydi
     const snap = await getDoc(doc(db, 'users', cred.user.uid));
     if (snap.exists()) {
       const data = snap.data();
@@ -379,8 +356,7 @@ async function handleLogin(e) {
       } catch (_) {}
     }
 
-    // ✅ TOOS U REDIRECT — onAuthStateChanged ha sugin
-    window.location.replace('dashboard.html');
+    window.location.replace('dashboard.html'); // ✅
 
   } catch (err) {
     setLoading(btn, false);
@@ -1347,30 +1323,8 @@ function fillProfileUI() {
 
 // ── 30. MAIN DOMContentLoaded ──────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
-(function loadCacheInstant() {
-    try {
-      const cached = localStorage.getItem('ematch_user_cache');
-      if (!cached) return;
-      const data = JSON.parse(cached);
-      if (!data?.uid) return;
-      currentUserData         = data;
-      window._ematch_uid      = data.uid;
-      window._ematch_userdata = data;
-      updateHeaderUI();
-      requestAnimationFrame(() => updateHeaderUI());
-      setTimeout(() => updateHeaderUI(), 300);
-      setTimeout(() => updateHeaderUI(), 800);
-    } catch (_) {}
-  })();
 
-  setTimeout(() => { if (currentUserData) updateHeaderUI(); }, 500);
-  // ── KA DAMBEEYA ──
-
-  const page = window.location.pathname.split('/').pop() || 'index.html';
-  initNavigation();
   const page = window.location.pathname.split('/').pop() || 'index.html'; // default to login
-
-  initNavigation();
 
   // Modal overlay tap = xidh
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
@@ -1658,3 +1612,4 @@ if (page === 'admin.html') {
   }
 
 });
+

@@ -343,21 +343,8 @@ async function handleLogin(e) {
 
   setLoading(btn, true);
   try {
-    const cred = await signInWithEmailAndPassword(auth, email, password);
-
-    const snap = await getDoc(doc(db, 'users', cred.user.uid));
-    if (snap.exists()) {
-      const data = snap.data();
-      try {
-        localStorage.setItem('ematch_user_cache', JSON.stringify({
-          ...data,
-          createdAt: data.createdAt?.toDate?.()?.toISOString() || null
-        }));
-      } catch (_) {}
-    }
-
-    window.location.replace('dashboard.html'); // ✅
-
+    await signInWithEmailAndPassword(auth, email, password);
+    // onAuthStateChanged handles redirect
   } catch (err) {
     setLoading(btn, false);
     const badCreds = [
@@ -372,6 +359,7 @@ async function handleLogin(e) {
       showToast('Khalad: ' + err.message, 'error');
   }
 }
+
 // ── 12. GOOGLE SIGN-IN ─────────────────────────────────────
 async function handleGoogleSignIn() {
   if (!requireOnline()) return;
@@ -643,11 +631,41 @@ async function openMatchModal(matchId) {
       </div>
 
       ${canJoin ? `
+        <div class="form-group mt-sm">
+          <label style="font-size:12px;font-weight:700;color:var(--text-muted)">
+            Game-ka Magacaaga (In-Game Username)
+          </label>
+          <div class="input-wrap">
+            <input type="text" id="join_username"
+              placeholder="Tusaale: PlayerXX123"
+              style="font-size:14px" autocomplete="off">
+          </div>
+        </div>
         <button class="btn btn-primary mt-sm" id="btn_join_match"
           data-id="${matchId}" data-stake="${m.stakeCoins}">
           <span class="btn-text">🎮 Ku Biir — 🪙 ${(m.stakeCoins||0).toLocaleString()}</span>
           <div class="btn-spinner"></div>
         </button>` : ''}
+
+      ${m.status==='locked' && (currentUser?.uid===m.createdBy || currentUser?.uid===m.joinedBy) ? `
+        <div class="card mt-sm" style="background:rgba(0,230,118,.04);border-color:rgba(0,230,118,.15)">
+          <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px">
+            📸 Natiijooyinka Dir — AI ayaa go'aan qaadanayaa
+          </div>
+          <label class="btn btn-ghost" style="cursor:pointer;width:100%;justify-content:center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+              <circle cx="12" cy="13" r="4"/>
+            </svg>
+            &nbsp; Screenshot Dir
+            <input type="file" accept="image/*" style="display:none"
+              onchange="analyzeScreenshot('${matchId}', this.files[0], '${currentUser?.uid}')">
+          </label>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:6px;text-align:center">
+            AI screenshot-ka akhrin doona oo winner automatic go'aamin doona
+          </div>
+        </div>` : ''}
 
       ${m.status==='open' && currentUser?.uid===m.createdBy ? `
         <div class="card mt-sm" style="background:rgba(0,230,118,.05);
@@ -671,8 +689,11 @@ async function openMatchModal(matchId) {
 
     const joinBtn = content.querySelector('#btn_join_match');
     if (joinBtn) {
-      joinBtn.addEventListener('click', () =>
-        joinMatch(matchId, parseInt(joinBtn.dataset.stake)));
+      joinBtn.addEventListener('click', () => {
+        const username = document.getElementById('join_username')?.value.trim() || '';
+        if (!username) { showToast('Game-ka magacaaga geli', 'error'); return; }
+        joinMatch(matchId, parseInt(joinBtn.dataset.stake), username);
+      });
     }
   } catch (err) {
     content.innerHTML =
@@ -681,7 +702,7 @@ async function openMatchModal(matchId) {
 }
 
 // ── 19. JOIN MATCH (Firestore Transaction) ─────────────────
-async function joinMatch(matchId, stakeCoins) {
+async function joinMatch(matchId, stakeCoins, inGameUsername) {
   if (!requireOnline() || !currentUser) return;
 
   const btn = document.getElementById('btn_join_match')
@@ -706,23 +727,17 @@ async function joinMatch(matchId, stakeCoins) {
       if (match.createdBy === currentUser.uid) throw new Error('Adigu abuuray match-kan');
       if ((user.coinBalance||0) < stakeCoins)  throw new Error('Lacag kuma filna');
 
-      const creatorRef  = doc(db, 'users', match.createdBy);
-      const creatorSnap = await tx.get(creatorRef);
-      const creator     = creatorSnap.data() || {};
-
       tx.update(matchRef, {
-        joinedBy: currentUser.uid,
-        status:   'locked',
-        lockedAt: serverTimestamp()
+        joinedBy:         currentUser.uid,
+        joinedByUsername: inGameUsername || '',
+        status:           'locked',
+        lockedAt:         serverTimestamp()
       });
 
       tx.update(userRef, {
         coinBalance:   (user.coinBalance   || 0) - stakeCoins,
         escrowBalance: (user.escrowBalance || 0) + stakeCoins
       });
-
-      // Creator's coins were already locked at match creation time.
-      // No additional deduction needed here — escrow already reflects the stake.
 
       const txRef = doc(collection(db, 'transactions'));
       tx.set(txRef, {
@@ -755,12 +770,15 @@ async function handleCreateMatch(e) {
   const platform   = document.getElementById('cm_platform')?.value;
   const stakeCoins = parseInt(document.getElementById('cm_stake')?.value) || 0;
   const title      = document.getElementById('cm_title')?.value.trim() || '';
+  const username   = document.getElementById('cm_username')?.value.trim() || '';
   const btn        = document.getElementById('btn_create_match');
 
   clearErrors('create-match-form');
   let valid = true;
   if (!platform)
     { showError('cm_platform', 'Platform dooro'); valid = false; }
+  if (!username)
+    { showError('cm_username', 'Game-ka magacaaga geli'); valid = false; }
   if (stakeCoins < 10)
     { showError('cm_stake', 'Ugu yaraan 10 coin'); valid = false; }
   if ((currentUserData?.coinBalance || 0) < stakeCoins)
@@ -780,14 +798,22 @@ async function handleCreateMatch(e) {
       const matchId  = matchRef.id;
 
       tx.set(matchRef, {
-        id:          matchId,
-        title:       title || platform + ' Match',
+        id:                 matchId,
+        title:              title || platform + ' Match',
         platform,
         stakeCoins,
-        createdBy:   currentUser.uid,
-        joinedBy:    null,
-        status:      'open',
-        winnerId:    null,
+        createdBy:          currentUser.uid,
+        createdByUsername:  username,
+        joinedBy:           null,
+        joinedByUsername:   null,
+        status:             'open',
+        winnerId:           null,
+        result: {
+          createdBy_claim:  null,
+          joinedBy_claim:   null,
+          dispute:          false,
+          screenshotBy:     null
+        },
         createdAt:   serverTimestamp(),
         completedAt: null,
         lockedAt:    null
@@ -815,13 +841,107 @@ async function handleCreateMatch(e) {
     if (document.getElementById('cm_platform')) document.getElementById('cm_platform').value = '';
     if (document.getElementById('cm_stake'))    document.getElementById('cm_stake').value    = '';
     if (document.getElementById('cm_title'))    document.getElementById('cm_title').value    = '';
+    if (document.getElementById('cm_username')) document.getElementById('cm_username').value = '';
   } catch (err) {
     setLoading(btn, false);
     showToast(err.message, 'error');
   }
 }
 
-// ── 21. DEPOSIT REQUEST ────────────────────────────────────
+// ── 21. AI SCREENSHOT ANALYSIS ────────────────────────────
+
+async function setMatchWinner(matchId, winnerUid, m) {
+  const loserUid = winnerUid === m.createdBy ? m.joinedBy : m.createdBy;
+  const prize    = (m.stakeCoins || 0) * 2;
+  await runTransaction(db, async tx => {
+    const mRef = doc(db, 'matches', matchId);
+    const wRef = doc(db, 'users', winnerUid);
+    const lRef = doc(db, 'users', loserUid);
+    const [wSnap, lSnap] = await Promise.all([tx.get(wRef), tx.get(lRef)]);
+    tx.update(mRef, { winnerId: winnerUid, status: 'done', completedAt: serverTimestamp() });
+    tx.update(wRef, {
+      coinBalance:   (wSnap.data().coinBalance   || 0) + prize,
+      escrowBalance: Math.max(0, (wSnap.data().escrowBalance || 0) - m.stakeCoins)
+    });
+    tx.update(lRef, {
+      escrowBalance: Math.max(0, (lSnap.data().escrowBalance || 0) - m.stakeCoins)
+    });
+    const t1 = doc(collection(db, 'transactions'));
+    tx.set(t1, { userId: winnerUid, type: 'match_win',  coins: +prize,       relatedMatch: matchId, createdAt: serverTimestamp(), meta: { matchId, loserUid } });
+    const t2 = doc(collection(db, 'transactions'));
+    tx.set(t2, { userId: loserUid,  type: 'match_loss', coins: -m.stakeCoins, relatedMatch: matchId, createdAt: serverTimestamp(), meta: { matchId, winnerUid } });
+  });
+}
+
+window.analyzeScreenshot = async function(matchId, file, myUid) {
+  if (!file) return;
+  if (!requireOnline()) return;
+
+  showToast('📸 AI screenshot-ka falanqaynaya...', 'info');
+
+  try {
+    // 1. File → base64
+    const base64 = await new Promise((res, rej) => {
+      const reader = new FileReader();
+      reader.onload  = () => res(reader.result.split(',')[1]);
+      reader.onerror = () => rej(new Error('File akhrinta ku guuldareysatay'));
+      reader.readAsDataURL(file);
+    });
+
+    // 2. Match xogta soo qaado
+    const mSnap = await getDoc(doc(db, 'matches', matchId));
+    if (!mSnap.exists()) { showToast('Match la ma helin', 'error'); return; }
+    const m         = mSnap.data();
+    const isCreator = myUid === m.createdBy;
+    const myUsername  = isCreator ? (m.createdByUsername || 'Player 1') : (m.joinedByUsername  || 'Player 2');
+    const oppUsername = isCreator ? (m.joinedByUsername  || 'Player 2') : (m.createdByUsername || 'Player 1');
+    const oppUid      = isCreator ? m.joinedBy : m.createdBy;
+
+    if (m.status !== 'locked') { showToast('Match live ma ahan', 'error'); return; }
+    if (m.winnerId)             { showToast('Winner horey la dejiyay', 'error'); return; }
+
+    // 3. Claude AI u dir
+const response = await fetch('/.netlify/functions/analyze-screenshot', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ base64, mediaType: file.type, myUsername, oppUsername })
+});
+
+const result = await response.json();
+
+    // 4. Natiijooyinka xukum
+    if (result.confidence === 'high' && result.winner !== 'unclear') {
+      const winnerUid = result.winner === 'player1' ? myUid : oppUid;
+      await setMatchWinner(matchId, winnerUid, m);
+      const isIWon = winnerUid === myUid;
+      showToast(isIWon ? '🏆 Adaa guuleystay! Coins la siiyay!' : '💸 Waan khasaaray. Ciyaarta xiga!', isIWon ? 'success' : 'error');
+      closeModal('match-modal');
+      await loadUserData(currentUser.uid);
+    } else {
+      // Low confidence → dispute → admin
+      await updateDoc(doc(db, 'matches', matchId), {
+        status:            'dispute',
+        'result.dispute':  true,
+        'result.screenshotBy': myUid,
+        'result.aiResult': result
+      });
+      await setDoc(doc(collection(db, 'disputes')), {
+        matchId,
+        submittedBy: myUid,
+        aiResult:    result,
+        createdAt:   serverTimestamp()
+      });
+      showToast('⚠️ Screenshot-ka cad ma ahayn — Admin ayaa go\'aan qaadanaya', 'warning');
+      closeModal('match-modal');
+    }
+
+  } catch (err) {
+    console.error('analyzeScreenshot:', err);
+    showToast('Screenshot-ka falanqaynta ku guuldareysatay: ' + err.message, 'error');
+  }
+};
+
+// ── 22. DEPOSIT REQUEST ────────────────────────────────────
 async function handleDeposit(e) {
   e.preventDefault();
   if (!requireOnline() || !currentUser) return;
@@ -1612,4 +1732,3 @@ if (page === 'admin.html') {
   }
 
 });
-

@@ -365,8 +365,23 @@ async function handleLogin(e) {
 
   setLoading(btn, true);
   try {
-    await signInWithEmailAndPassword(auth, email, password);
-    // onAuthStateChanged handles redirect
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+
+    // Cache kaydi
+    const snap = await getDoc(doc(db, 'users', cred.user.uid));
+    if (snap.exists()) {
+      const data = snap.data();
+      try {
+        localStorage.setItem('ematch_user_cache', JSON.stringify({
+          ...data,
+          createdAt: data.createdAt?.toDate?.()?.toISOString() || null
+        }));
+      } catch (_) {}
+    }
+
+    // ✅ TOOS U REDIRECT — onAuthStateChanged ha sugin
+    window.location.replace('dashboard.html');
+
   } catch (err) {
     setLoading(btn, false);
     const badCreds = [
@@ -381,7 +396,6 @@ async function handleLogin(e) {
       showToast('Khalad: ' + err.message, 'error');
   }
 }
-
 // ── 12. GOOGLE SIGN-IN ─────────────────────────────────────
 async function handleGoogleSignIn() {
   if (!requireOnline()) return;

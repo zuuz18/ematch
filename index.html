@@ -4,634 +4,409 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1117">
-  <title>eMatch — Admin</title>
+  <title>eMatch</title>
   <link rel="stylesheet" href="css/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
   <style>
 
-    /* ── Admin Variables ──────────────────────────────── */
-    :root {
-      --admin-gold:   #ffd700;
-      --admin-red:    #ef4444;
-      --admin-green:  #00e676;
-      --admin-blue:   #3b82f6;
-      --admin-purple: #a855f7;
+    /* ── Loading Screen ───────────────────────────────── */
+    #loading-screen {
+      position: fixed; inset: 0;
+      background: var(--bg-base);
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      z-index: 9999;
+      transition: opacity .3s ease;
     }
-
-    /* ── Hero ─────────────────────────────────────────── */
-    .admin-hero {
-      background: linear-gradient(135deg, #0d1117 0%, #1a0a2e 60%, #0d1a2e 100%);
-      padding: var(--sp-xl) var(--sp-md) var(--sp-md);
-      position: relative;
-      overflow: hidden;
-      border-bottom: 1px solid var(--glass-border);
-    }
-    .admin-hero::before {
-      content: '';
-      position: absolute; inset: 0;
-      background:
-        radial-gradient(circle at 10% 50%, rgba(168,85,247,.12) 0%, transparent 55%),
-        radial-gradient(circle at 90% 30%, rgba(59,130,246,.10) 0%, transparent 55%);
+    #loading-screen.fade-out {
+      opacity: 0;
       pointer-events: none;
     }
-    .admin-hero-inner {
-      position: relative; z-index: 1;
-      display: flex; align-items: center; gap: var(--sp-md);
-    }
-    .admin-shield {
-      width: 52px; height: 52px;
-      border-radius: var(--r-md);
-      background: linear-gradient(135deg, rgba(168,85,247,.3), rgba(59,130,246,.3));
-      border: 1px solid rgba(168,85,247,.4);
+    .loading-logo {
+      width: 80px; height: 80px;
+      border-radius: 24px;
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
       display: flex; align-items: center; justify-content: center;
-      font-size: 24px;
-      flex-shrink: 0;
-      box-shadow: 0 0 24px rgba(168,85,247,.2);
+      font-size: 40px;
+      margin-bottom: 24px;
+      box-shadow: 0 0 40px rgba(0,230,118,.3);
+      animation: logoPulse 1.8s ease-in-out infinite;
     }
-    .admin-hero h1 {
-      font-size: 20px; font-weight: 900;
-      background: linear-gradient(135deg, #a855f7, #3b82f6);
+    @keyframes logoPulse {
+      0%, 100% { box-shadow: 0 0 24px rgba(0,230,118,.25); transform: scale(1); }
+      50%       { box-shadow: 0 0 48px rgba(0,230,118,.45); transform: scale(1.04); }
+    }
+    .loading-title {
+      font-size: 26px; font-weight: 900;
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      margin-bottom: 2px;
+      margin-bottom: 8px;
     }
-    .admin-hero p {
-      font-size: 12px; color: var(--text-muted); margin: 0;
+    .loading-dots {
+      display: flex; gap: 6px; margin-top: 12px;
+    }
+    .loading-dots span {
+      width: 7px; height: 7px; border-radius: 50%;
+      background: var(--accent-green); opacity: .3;
+      animation: dotBlink 1.2s ease-in-out infinite;
+    }
+    .loading-dots span:nth-child(2) { animation-delay: .2s; }
+    .loading-dots span:nth-child(3) { animation-delay: .4s; }
+    @keyframes dotBlink {
+      0%, 100% { opacity: .3; transform: scale(1); }
+      50%       { opacity: 1;  transform: scale(1.3); }
     }
 
-    /* ── Tab Bar ──────────────────────────────────────── */
-    .admin-tabs {
+    /* ── Auth Page Layout ─────────────────────────────── */
+    #auth-page {
+      min-height: 100vh;
+      display: flex; flex-direction: column;
+      background: var(--bg-base);
+      opacity: 0;
+      transition: opacity .3s ease;
+    }
+    #auth-page.visible { opacity: 1; }
+
+    /* ── Hero / Branding ──────────────────────────────── */
+    .auth-hero {
+      padding: 48px var(--sp-md) var(--sp-xl);
+      text-align: center;
+      background: linear-gradient(180deg, rgba(0,230,118,.06) 0%, transparent 100%);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .auth-logo {
+      width: 72px; height: 72px;
+      border-radius: var(--r-lg);
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 36px;
+      margin: 0 auto var(--sp-md);
+      box-shadow: 0 0 32px rgba(0,230,118,.25);
+    }
+    .auth-hero h1 {
+      font-size: 28px; font-weight: 900;
+      background: linear-gradient(135deg, var(--accent-green), var(--accent-blue));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 6px;
+    }
+    .auth-hero p { font-size: 13px; color: var(--text-muted); margin: 0; }
+
+    /* ── Tab Switcher ─────────────────────────────────── */
+    .auth-tabs {
       display: flex;
       background: var(--bg-card);
       border-bottom: 1px solid var(--glass-border);
-      position: sticky;
-      top: 56px;
-      z-index: 80;
-      overflow-x: auto;
-      scrollbar-width: none;
+      position: sticky; top: 0; z-index: 10;
     }
-    .admin-tabs::-webkit-scrollbar { display: none; }
-    .admin-tab {
-      flex: 1;
-      min-width: 70px;
-      padding: 12px 8px;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-muted);
-      text-align: center;
+    .tab-btn {
+      flex: 1; padding: 14px;
+      font-size: 14px; font-weight: 700;
+      color: var(--text-muted); text-align: center;
       cursor: pointer;
       border-bottom: 2px solid transparent;
+      border-top: none; border-left: none; border-right: none;
+      background: none; font-family: inherit;
       transition: all var(--dur-fast) var(--ease);
-      white-space: nowrap;
-      user-select: none;
       -webkit-tap-highlight-color: transparent;
     }
-    .admin-tab.active {
-      color: var(--admin-purple);
-      border-bottom-color: var(--admin-purple);
-    }
-    .admin-tab .tab-icon { font-size: 16px; display: block; margin-bottom: 2px; }
-    .admin-tab .tab-badge {
-      display: inline-flex; align-items: center; justify-content: center;
-      background: var(--admin-red);
-      color: #fff;
-      font-size: 9px; font-weight: 800;
-      min-width: 16px; height: 16px;
-      border-radius: var(--r-full);
-      padding: 0 4px;
-      margin-left: 3px;
-      vertical-align: middle;
+    .tab-btn.active {
+      color: var(--accent-green);
+      border-bottom-color: var(--accent-green);
     }
 
     /* ── Tab Content ──────────────────────────────────── */
-    .admin-panel { display: none; }
-    .admin-panel.active { display: block; }
+    .tab-content { padding: var(--sp-lg) var(--sp-md); flex: 1; }
+    .tab-content.hidden { display: none; }
 
-    /* ── Stats Grid ───────────────────────────────────── */
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: var(--sp-sm);
-      padding: var(--sp-md);
-    }
-    .stat-card {
-      background: var(--bg-card);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--r-md);
-      padding: var(--sp-md);
-      position: relative;
-      overflow: hidden;
-      animation: statIn .4s var(--ease) both;
-    }
-    .stat-card:nth-child(1) { animation-delay: .05s; }
-    .stat-card:nth-child(2) { animation-delay: .10s; }
-    .stat-card:nth-child(3) { animation-delay: .15s; }
-    .stat-card:nth-child(4) { animation-delay: .20s; }
-    .stat-card:nth-child(5) { animation-delay: .25s; }
-    .stat-card:nth-child(6) { animation-delay: .30s; }
-    @keyframes statIn {
-      from { opacity:0; transform:translateY(12px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
-    .stat-card::before {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    }
-    .stat-card.gold::before   { background: linear-gradient(90deg, var(--admin-gold), transparent); }
-    .stat-card.green::before  { background: linear-gradient(90deg, var(--admin-green), transparent); }
-    .stat-card.blue::before   { background: linear-gradient(90deg, var(--admin-blue), transparent); }
-    .stat-card.red::before    { background: linear-gradient(90deg, var(--admin-red), transparent); }
-    .stat-card.purple::before { background: linear-gradient(90deg, var(--admin-purple), transparent); }
+    /* ── Form Styles ──────────────────────────────────── */
+    .auth-form { max-width: 420px; margin: 0 auto; }
 
-    .stat-icon {
-      font-size: 22px; margin-bottom: var(--sp-sm);
+    .form-group { margin-bottom: var(--sp-md); }
+    .form-group label {
       display: block;
-    }
-    .stat-value {
-      font-size: 24px; font-weight: 900;
-      line-height: 1;
-      margin-bottom: 4px;
-    }
-    .stat-label {
-      font-size: 11px; color: var(--text-muted);
-    }
-
-    /* ── Section Header ───────────────────────────────── */
-    .section-hdr {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      padding: var(--sp-md) var(--sp-md) var(--sp-sm);
-    }
-    .section-hdr h2 { font-size: 14px; font-weight: 800; }
-    .section-hdr .count-badge {
-      font-size: 11px; font-weight: 700;
-      background: var(--bg-card2);
-      border: 1px solid var(--border);
-      padding: 2px 8px;
-      border-radius: var(--r-full);
+      font-size: 12px; font-weight: 700;
       color: var(--text-muted);
-    }
-
-    /* ── Deposit Card ─────────────────────────────────── */
-    .dep-card {
-      margin: 0 var(--sp-md) var(--sp-sm);
-      background: var(--bg-card);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--r-md);
-      overflow: hidden;
-      animation: statIn .3s var(--ease) both;
-    }
-    .dep-card-head {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      padding: var(--sp-sm) var(--sp-md);
-      background: rgba(255,255,255,.02);
-      border-bottom: 1px solid var(--glass-border);
-    }
-    .dep-card-coins {
-      font-size: 18px; font-weight: 900;
-      color: var(--admin-gold);
-    }
-    .dep-card-body {
-      padding: var(--sp-sm) var(--sp-md);
-    }
-    .dep-card-row {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 12px; color: var(--text-secondary);
       margin-bottom: 6px;
+      text-transform: uppercase; letter-spacing: .4px;
     }
-    .dep-card-row:last-child { margin-bottom: 0; }
-    .dep-ussd {
-      font-family: monospace;
-      font-size: 11px;
-      background: var(--bg-card2);
-      border: 1px solid var(--border);
-      border-radius: var(--r-sm);
-      padding: 6px 10px;
-      color: var(--admin-green);
-      word-break: break-all;
-      margin: var(--sp-sm) 0;
-    }
-    .dep-actions {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: var(--sp-sm);
-      padding: var(--sp-sm) var(--sp-md) var(--sp-md);
-    }
-
-    /* ── Match Admin Card ─────────────────────────────── */
-    .match-admin-card {
-      margin: 0 var(--sp-md) var(--sp-sm);
-      background: var(--bg-card);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--r-md);
-      overflow: hidden;
-      animation: statIn .3s var(--ease) both;
-    }
-    .match-admin-head {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      padding: var(--sp-sm) var(--sp-md);
-      border-bottom: 1px solid var(--glass-border);
-      background: rgba(255,255,255,.02);
-    }
-    .match-admin-title {
-      font-size: 13px; font-weight: 700;
-    }
-    .match-admin-body {
-      padding: var(--sp-sm) var(--sp-md);
-    }
-    .vs-row {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      gap: var(--sp-sm);
-      margin-bottom: var(--sp-sm);
-    }
-    .vs-player {
-      flex: 1;
-      background: var(--bg-card2);
-      border: 1px solid var(--border);
-      border-radius: var(--r-sm);
-      padding: var(--sp-sm);
-      text-align: center;
-      cursor: pointer;
-      transition: all var(--dur-fast) var(--ease);
-    }
-    .vs-player:active { opacity: .7; }
-    .vs-player.selected {
-      border-color: var(--admin-gold);
-      background: rgba(255,215,0,.08);
-    }
-    .vs-player-avatar {
-      width: 36px; height: 36px;
-      border-radius: 50%;
-      display: flex; align-items: center;
-      justify-content: center;
-      font-size: 14px; font-weight: 900;
-      color: #000;
-      margin: 0 auto 6px;
-    }
-    .vs-player-uid {
-      font-size: 10px; color: var(--text-muted);
-    }
-    .vs-label {
-      font-size: 13px; font-weight: 900;
-      color: var(--text-muted);
-    }
-    .match-admin-prize {
-      display: flex; align-items: center;
-      justify-content: space-between;
-      font-size: 12px;
-      color: var(--text-secondary);
-      margin-bottom: var(--sp-sm);
-    }
-    .match-admin-prize span:last-child {
-      font-weight: 800; color: var(--admin-gold);
-    }
-
-    /* ── User Card ────────────────────────────────────── */
-    .user-card {
-      margin: 0 var(--sp-md) var(--sp-sm);
-      background: var(--bg-card);
-      border: 1px solid var(--glass-border);
-      border-radius: var(--r-md);
-      padding: var(--sp-md);
-      display: flex;
-      align-items: center;
-      gap: var(--sp-md);
-      animation: statIn .3s var(--ease) both;
-      cursor: pointer;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .user-card:active { opacity: .8; }
-    .user-avatar-lg {
-      width: 44px; height: 44px;
-      border-radius: 50%;
-      background: linear-gradient(135deg, var(--admin-purple), var(--admin-blue));
-      display: flex; align-items: center;
-      justify-content: center;
-      font-size: 16px; font-weight: 900; color: #fff;
-      flex-shrink: 0;
-    }
-    .user-info { flex: 1; min-width: 0; }
-    .user-name {
-      font-size: 14px; font-weight: 700;
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .user-email {
-      font-size: 11px; color: var(--text-muted);
-      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    }
-    .user-meta {
-      display: flex; gap: 6px; margin-top: 4px;
-    }
-    .user-coins-tag {
-      font-size: 10px; font-weight: 700;
-      background: rgba(255,215,0,.1);
-      border: 1px solid rgba(255,215,0,.2);
-      color: var(--admin-gold);
-      padding: 1px 6px;
-      border-radius: var(--r-full);
-    }
-    .user-role-tag {
-      font-size: 10px; font-weight: 700;
-      padding: 1px 6px;
-      border-radius: var(--r-full);
-    }
-    .role-owner         { background:rgba(168,85,247,.12); color:var(--admin-purple); border:1px solid rgba(168,85,247,.25); }
-    .role-administrator { background:rgba(59,130,246,.12);  color:var(--admin-blue);   border:1px solid rgba(59,130,246,.25); }
-    .role-user          { background:rgba(255,255,255,.05); color:var(--text-muted);   border:1px solid var(--border); }
-
-    /* ── Search Bar ───────────────────────────────────── */
-    .admin-search {
-      margin: var(--sp-md) var(--sp-md) var(--sp-sm);
-      position: relative;
-    }
-    .admin-search input {
+    .input-wrap { position: relative; }
+    .input-wrap input {
       width: 100%;
       background: var(--bg-card);
       border: 1px solid var(--glass-border);
       border-radius: var(--r-md);
-      padding: 10px 14px 10px 38px;
-      font-size: 13px;
-      color: var(--text-primary);
+      padding: 13px 16px;
+      font-size: 15px; color: var(--text-primary);
       font-family: inherit;
+      transition: border-color var(--dur-fast);
+      box-sizing: border-box;
     }
-    .admin-search-icon {
-      position: absolute; left: 12px; top: 50%;
+    .input-wrap input:focus {
+      outline: none;
+      border-color: var(--accent-green);
+      box-shadow: 0 0 0 3px rgba(0,230,118,.12);
+    }
+    .input-wrap input.input-error { border-color: var(--accent-red); }
+    .input-wrap input::placeholder { color: var(--text-muted); opacity: .6; }
+
+    .pw-toggle {
+      position: absolute; right: 12px; top: 50%;
       transform: translateY(-50%);
-      color: var(--text-muted); font-size: 15px;
-    }
-
-    /* ── Empty State ──────────────────────────────────── */
-    .admin-empty {
-      text-align: center;
-      padding: 40px var(--sp-md);
-      color: var(--text-muted);
-    }
-    .admin-empty .icon { font-size: 40px; margin-bottom: 12px; }
-    .admin-empty p { font-size: 13px; }
-
-    /* ── User Detail Modal ────────────────────────────── */
-    .user-detail-row {
+      background: none; border: none;
+      color: var(--text-muted); cursor: pointer; padding: 4px;
       display: flex; align-items: center;
-      justify-content: space-between;
-      padding: var(--sp-sm) 0;
-      border-bottom: 1px solid var(--glass-border);
-      font-size: 13px;
     }
-    .user-detail-row:last-child { border-bottom: none; }
-    .user-detail-label { color: var(--text-muted); }
-    .user-detail-value { font-weight: 600; }
-
-    /* ── Live pulse ───────────────────────────────────── */
-    @keyframes livePulse {
-      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.4); }
-      50%      { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
-    }
-    .live-dot {
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--admin-red);
-      animation: livePulse 1.5s ease-in-out infinite;
-      display: inline-block;
-      margin-right: 4px;
+    .error-msg {
+      font-size: 11px; color: var(--accent-red);
+      margin-top: 4px; min-height: 16px; display: block;
     }
 
-    /* ── Refresh btn ──────────────────────────────────── */
-    .refresh-btn {
-      background: none; border: none;
-      color: var(--text-muted);
-      cursor: pointer; padding: 4px;
-      border-radius: var(--r-sm);
-      transition: color var(--dur-fast);
+    /* ── Divider ──────────────────────────────────────── */
+    .auth-divider {
+      display: flex; align-items: center;
+      gap: var(--sp-sm); margin: var(--sp-md) 0;
+      color: var(--text-muted); font-size: 12px; font-weight: 600;
     }
-    .refresh-btn:active { color: var(--admin-purple); }
+    .auth-divider::before, .auth-divider::after {
+      content: ''; flex: 1; height: 1px; background: var(--glass-border);
+    }
 
-    /* ── Filter chips ─────────────────────────────────── */
-    .admin-filter-row {
-      display: flex; gap: var(--sp-sm);
-      padding: 0 var(--sp-md) var(--sp-sm);
-      overflow-x: auto; scrollbar-width: none;
-    }
-    .admin-filter-row::-webkit-scrollbar { display: none; }
-    .admin-chip {
-      flex-shrink: 0;
-      font-size: 11px; font-weight: 700;
-      padding: 5px 12px;
-      border-radius: var(--r-full);
-      background: var(--bg-card2);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
+    /* ── Google Button ────────────────────────────────── */
+    .btn-google {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-md);
+      padding: 13px 16px;
+      font-size: 14px; font-weight: 700;
+      color: var(--text-primary); font-family: inherit;
       cursor: pointer;
+      display: flex; align-items: center;
+      justify-content: center; gap: 10px;
       transition: all var(--dur-fast) var(--ease);
+      -webkit-tap-highlight-color: transparent;
     }
-    .admin-chip.active {
-      background: rgba(168,85,247,.15);
-      border-color: rgba(168,85,247,.4);
-      color: var(--admin-purple);
+    .btn-google:active { opacity: .8; transform: scale(.98); }
+
+    /* ── Forgot Password ──────────────────────────────── */
+    .forgot-link {
+      background: none; border: none;
+      color: var(--accent-green);
+      font-size: 12px; font-weight: 600;
+      cursor: pointer; font-family: inherit;
+      padding: 0; margin-top: var(--sp-sm);
+      display: block; text-align: right;
     }
 
-    /* back btn */
-    .back-btn {
-      display: flex; align-items: center; gap: 6px;
-      background: none; border: none;
-      color: var(--text-secondary);
-      font-size: 14px; font-weight: 600;
-      cursor: pointer; padding: 0;
-      font-family: inherit;
+    .btn-auth { width: 100%; margin-top: var(--sp-md); }
+
+    .auth-terms {
+      font-size: 11px; color: var(--text-muted);
+      text-align: center; margin-top: var(--sp-md); line-height: 1.5;
     }
-    .back-btn:active { opacity: .7; }
 
   </style>
 </head>
 <body>
 <div id="app">
 
-  <!-- Offline Banner -->
-  <div id="offline-banner" class="offline-banner hidden" role="alert">
-    📵 Internetka kuma xidna
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- LOADING SCREEN                                     -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div id="loading-screen">
+    <div class="loading-logo">🎮</div>
+    <div class="loading-title">eMatch</div>
+    <div class="loading-dots">
+      <span></span><span></span><span></span>
+    </div>
   </div>
 
-  <!-- Top Header -->
-  <header class="top-header">
-    <button class="back-btn" onclick="history.back()">
-      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-        <polyline points="15 18 9 12 15 6"/>
-      </svg>
-      Dib
-    </button>
-    <div style="font-size:15px;font-weight:800">🛡️ Admin</div>
-    <div class="sos-chip" onclick="window.location.href='wallet.html'"
-      role="button" tabindex="0">
-       <span class="sos-balance-display">—</span>
-    </div>
-  </header>
+  <!-- ══════════════════════════════════════════════════ -->
+  <!-- AUTH PAGE (login / register)                       -->
+  <!-- ══════════════════════════════════════════════════ -->
+  <div id="auth-page">
 
-  <main class="page-content" role="main">
+    <div id="offline-banner" class="offline-banner hidden" role="alert">
+      📵 Internetka kuma xidna
+    </div>
 
     <!-- Hero -->
-    <div class="admin-hero">
-      <div class="admin-hero-inner">
-        <div class="admin-shield">🛡️</div>
-        <div>
-          <h1>Admin Dashboard</h1>
-          <p id="admin-uid-display">Xisaabta admin-ka</p>
-        </div>
-      </div>
+    <div class="auth-hero">
+      <div class="auth-logo">🎮</div>
+      <h1>eMatch</h1>
+      <p>Ciyaar · Tartam · Guuleeso</p>
     </div>
 
-    <!-- Tab Bar -->
-    <div class="admin-tabs">
-      <div class="admin-tab active" data-tab="stats" onclick="switchTab('stats')">
-        <span class="tab-icon">📊</span>Stats
-      </div>
-      <div class="admin-tab" data-tab="deposits" onclick="switchTab('deposits')">
-        <span class="tab-icon">💰</span>Deposits
-        <span class="tab-badge" id="dep-badge" style="display:none">0</span>
-      </div>
-      <div class="admin-tab" data-tab="matches" onclick="switchTab('matches')">
-        <span class="tab-icon">🎮</span>Matches
-      </div>
-      <div class="admin-tab" data-tab="users" onclick="switchTab('users')">
-        <span class="tab-icon">👥</span>Users
-      </div>
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <button class="tab-btn active" data-tab="login"    aria-selected="true">Gal</button>
+      <button class="tab-btn"        data-tab="register" aria-selected="false">Diiwaan Geli</button>
     </div>
 
-    <!-- ════════════════════════════════════════════════ -->
-    <!-- TAB 1: STATS                                    -->
-    <!-- ════════════════════════════════════════════════ -->
-    <div class="admin-panel active" id="panel-stats">
-      <div class="stats-grid">
-        <div class="stat-card gold">
-          <span class="stat-icon"></span>
-          <div class="stat-value" id="s-total-coins">—</div>
-          <div class="stat-label">Coins Oo Dhan</div>
-        </div>
-        <div class="stat-card blue">
-          <span class="stat-icon">👥</span>
-          <div class="stat-value" id="s-total-users">—</div>
-          <div class="stat-label">Isticmaalayaasha</div>
-        </div>
-        <div class="stat-card green">
-          <span class="stat-icon">🎮</span>
-          <div class="stat-value" id="s-total-matches">—</div>
-          <div class="stat-label">Matches Oo Dhan</div>
-        </div>
-        <div class="stat-card red">
-          <span class="stat-icon">🔴</span>
-          <div class="stat-value" id="s-live-matches">—</div>
-          <div class="stat-label">Live Hadda</div>
-        </div>
-        <div class="stat-card purple">
-          <span class="stat-icon">💰</span>
-          <div class="stat-value" id="s-pending-deps">—</div>
-          <div class="stat-label">Deposits Sugaya</div>
-        </div>
-        <div class="stat-card gold">
-          <span class="stat-icon">🏆</span>
-          <div class="stat-value" id="s-total-wins">—</div>
-          <div class="stat-label">Guulaha Oo Dhan</div>
-        </div>
-      </div>
+    <!-- LOGIN -->
+    <div class="tab-content" data-tab="login">
+      <form class="auth-form" id="login-form" novalidate>
 
-      <!-- Recent Activity -->
-      <div class="section-hdr">
-        <h2>⚡ Dhaqdhaqaaqa Dambe</h2>
-        <button class="refresh-btn" onclick="loadStats()">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polyline points="23 4 23 10 17 10"/>
-            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-          </svg>
+        <div class="form-group">
+          <label for="login_email">Email</label>
+          <div class="input-wrap">
+            <input type="email" id="login_email"
+              placeholder="email@example.com"
+              autocomplete="email" inputmode="email">
+          </div>
+          <span class="error-msg" id="login_email_err"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="login_password">Password</label>
+          <div class="input-wrap">
+            <input type="password" id="login_password"
+              placeholder="••••••••"
+              autocomplete="current-password">
+            <button type="button" class="pw-toggle" aria-label="Password muuji/qari">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          <span class="error-msg" id="login_password_err"></span>
+          <button type="button" class="forgot-link" id="btn_forgot_pw">
+            Password-ka ilowday?
+          </button>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-auth" id="btn_login">
+          <span class="btn-text">🔑 Gal</span>
+          <div class="btn-spinner"></div>
         </button>
-      </div>
-      <div id="recent-activity" style="padding:0 var(--sp-md) var(--sp-xl)">
-        <div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div>
-      </div>
+
+        <div class="auth-divider">ama</div>
+
+        <button type="button" class="btn-google" id="btn_google">
+          <svg width="18" height="18" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Google ku gal
+        </button>
+
+      </form>
     </div>
 
-    <!-- ════════════════════════════════════════════════ -->
-    <!-- TAB 2: DEPOSITS                                 -->
-    <!-- ════════════════════════════════════════════════ -->
-    <div class="admin-panel" id="panel-deposits">
-      <div class="admin-filter-row">
-        <div class="admin-chip active" data-depfilter="pending"  onclick="setDepFilter('pending')">⏳ Sugaya</div>
-        <div class="admin-chip"        data-depfilter="approved" onclick="setDepFilter('approved')">✅ La Ogolaaday</div>
-        <div class="admin-chip"        data-depfilter="rejected" onclick="setDepFilter('rejected')">❌ La Diidey</div>
-      </div>
-      <div class="section-hdr">
-        <h2>💰 Deposit Requests</h2>
-        <span class="count-badge" id="dep-count">0</span>
-      </div>
-      <div id="deposits-list">
-        <div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div>
-      </div>
-      <div style="height:var(--sp-xl)"></div>
+    <!-- REGISTER -->
+    <div class="tab-content hidden" data-tab="register">
+      <form class="auth-form" id="register-form" novalidate>
+
+        <div class="form-group">
+          <label for="reg_fullName">Magaca Buuxa</label>
+          <div class="input-wrap">
+            <input type="text" id="reg_fullName"
+              placeholder="Magacaaga oo buuxa"
+              autocomplete="name">
+          </div>
+          <span class="error-msg" id="reg_fullName_err"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="reg_email">Email</label>
+          <div class="input-wrap">
+            <input type="email" id="reg_email"
+              placeholder="email@example.com"
+              autocomplete="email" inputmode="email">
+          </div>
+          <span class="error-msg" id="reg_email_err"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="reg_phone">Lambarka Telefoonka</label>
+          <div class="input-wrap">
+            <input type="tel" id="reg_phone"
+              placeholder="+252xxxxxxxxx"
+              autocomplete="tel" inputmode="tel">
+          </div>
+          <span class="error-msg" id="reg_phone_err"></span>
+        </div>
+
+        <div class="form-group">
+          <label for="reg_password">Password</label>
+          <div class="input-wrap">
+            <input type="password" id="reg_password"
+              placeholder="Ugu yaraan 8 xaraf"
+              autocomplete="new-password">
+            <button type="button" class="pw-toggle" aria-label="Password muuji/qari">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+          <span class="error-msg" id="reg_password_err"></span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-auth" id="btn_register">
+          <span class="btn-text">✅ Xisaab Fur</span>
+          <div class="btn-spinner"></div>
+        </button>
+
+        <p class="auth-terms">
+          Xisaab furista waxaad ogolaanaysaa xeerarka iyo shuruucda eMatch
+        </p>
+
+      </form>
     </div>
 
-    <!-- ════════════════════════════════════════════════ -->
-    <!-- TAB 3: MATCHES                                  -->
-    <!-- ════════════════════════════════════════════════ -->
-    <div class="admin-panel" id="panel-matches">
-      <div class="admin-filter-row">
-        <div class="admin-chip active" data-matchfilter="locked" onclick="setMatchFilter('locked')"><span class="live-dot"></span>Live</div>
-        <div class="admin-chip"        data-matchfilter="open"   onclick="setMatchFilter('open')">⏳ Furan</div>
-        <div class="admin-chip"        data-matchfilter="done"   onclick="setMatchFilter('done')">✅ Dhammaaday</div>
-      </div>
-      <div class="section-hdr">
-        <h2>🎮 Matches</h2>
-        <span class="count-badge" id="match-count">0</span>
-      </div>
-      <div id="matches-admin-list">
-        <div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div>
-      </div>
-      <div style="height:var(--sp-xl)"></div>
-    </div>
+  </div><!-- /#auth-page -->
 
-    <!-- ════════════════════════════════════════════════ -->
-    <!-- TAB 4: USERS                                    -->
-    <!-- ════════════════════════════════════════════════ -->
-    <div class="admin-panel" id="panel-users">
-      <div class="admin-search">
-        <span class="admin-search-icon">🔍</span>
-        <input type="text" id="user-search" placeholder="Magac ama email ka raadi..."
-          oninput="filterUsers(this.value)">
-      </div>
-      <div class="section-hdr">
-        <h2>👥 Isticmaalayaasha</h2>
-        <span class="count-badge" id="user-count">0</span>
-      </div>
-      <div id="users-list">
-        <div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div>
-      </div>
-      <div style="height:var(--sp-xl)"></div>
-    </div>
+</div><!-- /#app -->
 
-  </main>
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- AUTH CHECK — inline, runs before app.js               -->
+<!-- ══════════════════════════════════════════════════════ -->
+<script type="module">
+  import { initializeApp }       from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
-  <!-- ── User Detail Modal ──────────────────────────────── -->
-  <div class="modal-overlay" id="user-modal">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div id="user-modal-content">
-        <div class="skeleton sk-block mb-md"></div>
-      </div>
-    </div>
-  </div>
+  const firebaseConfig = {
+    apiKey:            "AIzaSyAW921oL1KTEk5n75xWvfGWM4Ab1SKnpbg",
+    authDomain:        "ematch-bb818.firebaseapp.com",
+    databaseURL:       "https://ematch-bb818-default-rtdb.firebaseio.com",
+    projectId:         "ematch-bb818",
+    storageBucket:     "ematch-bb818.firebasestorage.app",
+    messagingSenderId: "955647946180",
+    appId:             "1:955647946180:web:c66947044f0dd6f633c891"
+  };
 
-  <!-- ── Confirm Winner Modal ───────────────────────────── -->
-  <div class="modal-overlay" id="winner-modal">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div id="winner-modal-content"></div>
-    </div>
-  </div>
+  const fireApp  = initializeApp(firebaseConfig, 'auth-check');
+  const fireAuth = getAuth(fireApp);
 
-</div>
+  const loadingEl = document.getElementById('loading-screen');
+  const authEl    = document.getElementById('auth-page');
+
+  function hideLoading() {
+    loadingEl.classList.add('fade-out');
+    setTimeout(() => loadingEl.style.display = 'none', 300);
+  }
+
+  // onAuthStateChanged — called once on page load
+  const unsub = onAuthStateChanged(fireAuth, user => {
+    unsub(); // unsubscribe immediately — one-time check
+    if (user) {
+      // User horay u login sameeyay — toos u dir dashboard
+      window.location.replace('dashboard.html');
+    } else {
+      // User ma jiro — login page muuji
+      hideLoading();
+      authEl.classList.add('visible');
+    }
+  });
+</script>
 
 <script src="js/sos-rate.js"></script>
-<script src="js/nav.js"></script>
 <script type="module" src="js/app.js"></script>
-<script src="js/admin.js"></script>
 </body>
 </html>

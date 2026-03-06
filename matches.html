@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="so" dir="ltr">
 <head>
-  <link rel="icon" href="img/ematch-logo.svg">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1117">
@@ -191,11 +190,11 @@
   <header class="top-header">
     <div class="logo">Matches</div>
     <div class="header-actions">
-      <div class="coin-chip"
+      <div class="sos-chip"
         onclick="window.location.href='wallet.html'"
         role="button" tabindex="0"
         aria-label="Wallet fur">
-        🪙 <span class="coin-balance-display">—</span>
+         <span class="sos-balance-display">—</span>
       </div>
       <div class="avatar" id="avatar-btn"
         onclick="window.location.href='profile.html'"
@@ -232,7 +231,7 @@
         <p>Hadda socda matches-ka ku biir</p>
       </div>
       <div class="prize-pool-amount" id="total-prize-pool">
-        🪙 <span id="prize-pool-number">—</span>
+         <span id="prize-pool-number">—</span>
       </div>
     </div>
 
@@ -462,6 +461,8 @@
 </div>
 
 <!-- Firebase SDK -->
+<script src="js/sos-rate.js"></script>
+<script src="js/nav.js"></script>
 <script type="module" src="js/app.js"></script>
 
 <!-- Matches Page Logic -->
@@ -667,7 +668,7 @@
 
     return `
       <div class="match-list-item" data-id="${m.id}" role="listitem" tabindex="0"
-        aria-label="${m.platform} match — ${m.stakeCoins} coins">
+        aria-label="${m.platform} match — ${m.stakeCoins} SOS">
         <div class="match-list-icon">
           ${emoji}
           ${isLive ? '<div style="position:absolute;top:4px;right:4px;width:8px;height:8px;background:var(--accent-red);border-radius:50%;animation:pulse 1.2s ease-in-out infinite"></div>' : ''}
@@ -688,9 +689,9 @@
           </div>
         </div>
         <div class="match-list-right">
-          <span class="match-stake-big">🪙${(m.stakeCoins||0).toLocaleString()}</span>
+          <span class="match-stake-big">${window.sosFormat(m.stakeCoins||0)}</span>
           <span style="font-size:10px;color:var(--text-muted)">
-            Prize: 🪙${((m.stakeCoins||0)*2).toLocaleString()}
+            Prize: ${window.sosFormat((m.stakeCoins||0)*2)}
           </span>
         </div>
       </div>`;
@@ -749,13 +750,13 @@
         <div class="grid-2 mb-md">
           <div class="card" style="text-align:center;padding:var(--sp-md)">
             <div style="font-size:22px;font-weight:900;color:var(--accent-green)">
-              🪙${(m.stakeCoins||0).toLocaleString()}
+              ${window.sosFormat(m.stakeCoins||0)}
             </div>
             <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Stake</div>
           </div>
           <div class="card" style="text-align:center;padding:var(--sp-md)">
             <div style="font-size:22px;font-weight:900;color:var(--accent-gold)">
-              🪙${((m.stakeCoins||0)*2).toLocaleString()}
+              ${window.sosFormat((m.stakeCoins||0)*2)}
             </div>
             <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Prize Pool</div>
           </div>
@@ -820,7 +821,7 @@
         ${canJoin ? `
           <button class="btn btn-primary" id="btn_join_from_matches"
             data-id="${matchId}" data-stake="${m.stakeCoins}">
-            <span class="btn-text">🎮 Ku Biir — 🪙 ${(m.stakeCoins||0).toLocaleString()}</span>
+            <span class="btn-text">🎮 Ku Biir —  ${window.sosFormat(m.stakeCoins||0)}</span>
             <div class="btn-spinner"></div>
           </button>` : ''}
 
@@ -896,8 +897,5 @@
     if (b) b.classList.add('hidden');
   });
 </script>
-<script src="js/nav.js"></script>
- 
-<script type="module" src="js/app.js"></script>
 </body>
 </html>

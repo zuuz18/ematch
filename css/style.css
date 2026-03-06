@@ -95,17 +95,19 @@ label{font-size:13px;font-weight:500;color:var(--text-secondary);display:block;m
 }
 .avatar:active{transform:scale(.93)}
 
-.coin-chip{
-  display:flex;align-items:center;gap:4px;
-  background:var(--glass-bg);
-  border:1px solid var(--glass-border);
+.sos-chip{
+  display:flex;align-items:center;gap:5px;
+  background:rgba(224,120,24,0.12);
+  border:1px solid rgba(224,120,24,0.28);
   border-radius:var(--r-full);
-  padding:4px 10px;
-  font-size:13px;font-weight:700;
-  color:var(--accent-green);
+  padding:3px 10px 3px 4px;
   cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
 }
-.coin-chip svg{width:14px;height:14px;flex-shrink:0}
+.sos-chip-amount{font-size:13px;font-weight:800;color:#ffb030}
+.sos-chip-usd{font-size:9px;color:rgba(255,176,48,0.55)}
+.sos-icon{display:inline-block;vertical-align:middle;flex-shrink:0}
+.sos-wrap{display:inline-flex;align-items:center;vertical-align:middle;margin:0 1px}
 
 /* ── Bottom Navigation ──────────────────────────────────── */
 .bottom-nav{

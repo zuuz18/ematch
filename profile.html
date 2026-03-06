@@ -2,7 +2,6 @@
 <!DOCTYPE html>
 <html lang="so" dir="ltr">
 <head>
-  <link rel="icon" href="img/ematch-logo.svg">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1117">
@@ -120,11 +119,11 @@
   <header class="top-header">
     <div class="logo">Profile</div>
     <div class="header-actions">
-      <div class="coin-chip"
+      <div class="sos-chip"
         onclick="window.location.href='wallet.html'"
         role="button" tabindex="0"
         aria-label="Wallet fur">
-        🪙 <span class="coin-balance-display">—</span>
+         <span class="sos-balance-display">—</span>
       </div>
     </div>
   </header>
@@ -176,7 +175,7 @@
       <div class="stat-grid mt-lg mb-md" role="region" aria-label="Profile statistics">
         <div class="stat-cell">
           <div class="stat-value text-green" id="stat-coins">—</div>
-          <div class="stat-label">🪙 Coins</div>
+          <div class="stat-label"> SOS</div>
         </div>
         <div class="stat-cell">
           <div class="stat-value" id="stat-matches" style="color:var(--accent-blue)">—</div>
@@ -201,7 +200,7 @@
             <span style="font-size:13px;color:var(--text-muted)">Escrow (Match ku jira)</span>
           </div>
           <span style="font-size:15px;font-weight:800;color:var(--accent-gold)">
-            🪙 <span id="stat-escrow">—</span>
+             <span id="stat-escrow">—</span>
           </span>
         </div>
       </div>
@@ -505,7 +504,7 @@
       <h2 id="about-title" style="margin-bottom:var(--sp-sm)">eMatch</h2>
       <p style="margin-bottom:var(--sp-sm)">Version 1.0.0</p>
       <p style="font-size:13px;margin-bottom:var(--sp-lg)">
-        Online gaming platform — ciyaar, tartam, coins guuleeso.
+        Online gaming platform — ciyaar, tartam, SOS guuleeso.
         Firebase + Firestore powered.
       </p>
       <div class="card card-glass" style="text-align:left;margin-bottom:var(--sp-md)">
@@ -522,6 +521,8 @@
 </div>
 
 <!-- Firebase SDK -->
+<script src="js/sos-rate.js"></script>
+<script src="js/nav.js"></script>
 <script type="module" src="js/app.js"></script>
 
 <script type="module">
@@ -646,7 +647,7 @@
     if (navigator.share) {
       navigator.share({
         title: 'eMatch — Gaming Platform',
-        text:  'Kaalay eMatch ku ciyaar, tartam, coins guuleeso! 🎮',
+        text:  'Kaalay eMatch ku ciyaar, tartam, SOS guuleeso! 🎮',
         url:   window.location.origin
       }).catch(() => {});
     } else {
@@ -686,8 +687,5 @@
     setTimeout(() => { t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 3000);
   }
 </script>
-<script src="js/nav.js"></script>
-
-<script type="module" src="js/app.js"></script>
 </body>
 </html>

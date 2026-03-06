@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="so" dir="ltr">
 <head>
-  <link rel="icon" href="img/ematch-logo.svg">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1117">
@@ -24,10 +23,10 @@
   <header class="top-header">
     <div class="logo">Wallet</div>
     <div class="header-actions">
-      <div class="coin-chip"
+      <div class="sos-chip"
         title="Coin balance"
         aria-label="Coin balance">
-        🪙 <span class="coin-balance-display">—</span>
+         <span class="sos-balance-display">—</span>
       </div>
       <div class="avatar"
         id="avatar-btn"
@@ -53,7 +52,7 @@
           💳
         </div>
 
-        <div class="balance-label">COIN BALANCE</div>
+        <div class="balance-label">SHILLING BALANCE</div>
         <div class="balance-amount"
           id="wallet-coin-balance"
           aria-live="polite"
@@ -62,7 +61,7 @@
         </div>
         <div class="balance-sub">
           ≈ $<span id="wallet-usd-equiv">0.00</span> USD
-          <span style="color:var(--text-muted);margin-left:4px">(10 coins = $1)</span>
+          <span style="color:var(--text-muted);margin-left:4px">(8 kun SOS = $0.25)</span>
         </div>
 
         <!-- Escrow Row -->
@@ -78,7 +77,7 @@
             aria-live="polite">
             —
           </span>
-          <span style="font-size:12px;color:var(--text-muted)">🪙</span>
+          <span style="font-size:12px;color:var(--text-muted)"></span>
         </div>
       </div>
 
@@ -87,7 +86,7 @@
         <button
           class="btn btn-gold"
           id="btn_open_deposit"
-          aria-label="Coins ku shub — deposit">
+          aria-label="SOS ku shub — deposit">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <line x1="12" y1="5" x2="12" y2="19"/>
@@ -98,7 +97,7 @@
         <button
           class="btn btn-secondary"
           id="btn_open_send"
-          aria-label="Coins dir">
+          aria-label="SOS dir">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="22" y1="2" x2="11" y2="13"/>
@@ -114,7 +113,7 @@
           <div>
             <div class="balance-label">QIIMAHA MAANTA</div>
             <div style="font-size:16px;font-weight:700;color:var(--text-primary);margin-top:4px">
-              🪙 10 Coins = $1.00 USD
+               32 kun SOS = $1.00 USD
             </div>
           </div>
           <div style="font-size:28px">💱</div>
@@ -276,7 +275,7 @@
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-header">
-      <h2 id="deposit-modal-title">💰 Coins Ku Shub</h2>
+      <h2 id="deposit-modal-title">💰 SOS Ku Shub</h2>
       <button class="modal-close"
         onclick="closeModal('deposit-modal')"
         aria-label="Xidh">✕</button>
@@ -306,7 +305,7 @@
             aria-describedby="dep_amount_err dep_coins_preview">
         </div>
         <div class="error-msg" id="dep_amount_err" role="alert" aria-live="polite"></div>
-        <div class="field-hint" id="dep_coins_preview">🪙 Coins la helayo: —</div>
+        <div class="field-hint" id="dep_coins_preview"> SOS la helayo: —</div>
       </div>
 
       <!-- Phone -->
@@ -358,11 +357,11 @@
         <div class="flex justify-between items-center">
           <span style="font-size:13px;color:var(--text-muted)">La helayo:</span>
           <span style="font-size:18px;font-weight:900;color:var(--accent-green)">
-            🪙 <span id="dep_preview_coins">—</span>
+             <span id="dep_preview_coins">—</span>
           </span>
         </div>
         <div style="font-size:12px;color:var(--text-muted);margin-top:6px">
-          $1 = 10 coins · Xaqiijinta: 5–30 daqiiqo
+          $1 = 32 kun SOS · Xaqiijinta: 5–30 daqiiqo
         </div>
       </div>
 
@@ -417,7 +416,7 @@
         <div>3️⃣ Call ku dhufo — xaqiiji lacagta</div>
         <div>4️⃣ SMS xaqiijin haddaad hesho, screenshots dir admin-ka</div>
         <div style="margin-top:8px;color:var(--accent-gold)">
-          ⏳ <strong>5–30 daqiiqo</strong> gudahood coins-kaaga waa la kordhin doonaa
+          ⏳ <strong>5–30 daqiiqo</strong> gudahood shillinkaaga SOS waa la kordhin doonaa
         </div>
       </div>
     </div>
@@ -447,7 +446,7 @@
   <div class="modal-sheet">
     <div class="modal-handle"></div>
     <div class="modal-header">
-      <h2 id="send-modal-title">📤 Coins Dir</h2>
+      <h2 id="send-modal-title">📤 SOS Dir</h2>
       <button class="modal-close"
         onclick="closeModal('send-modal')"
         aria-label="Xidh">✕</button>
@@ -481,7 +480,7 @@
 
       <!-- Amount -->
       <div class="form-group">
-        <label for="send_amount">Coins Tiradooda 🪙</label>
+        <label for="send_amount">SOS Tiradooda </label>
         <div class="input-wrap">
           <svg class="input-icon" xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -495,12 +494,12 @@
             placeholder="100"
             min="1"
             inputmode="numeric"
-            aria-label="Coins tirada"
+            aria-label="SOS tirada"
             aria-describedby="send_amount_err">
         </div>
         <div class="error-msg" id="send_amount_err" role="alert" aria-live="polite"></div>
         <div class="field-hint">
-          Lacagtaada: 🪙 <span class="coin-balance-display">—</span> coins
+          Lacagtaada:  <span class="sos-balance-display">—</span>
         </div>
       </div>
 
@@ -516,7 +515,7 @@
 
       <!-- Submit -->
       <button type="submit" class="btn btn-primary" id="btn_send_coins">
-        <span class="btn-text">📤 Coins Dir</span>
+        <span class="btn-text">📤 SOS Dir</span>
         <div class="btn-spinner"></div>
       </button>
 
@@ -525,6 +524,8 @@
 </div>
 
 <!-- Firebase SDK -->
+<script src="js/sos-rate.js"></script>
+<script src="js/nav.js"></script>
 <script type="module" src="js/app.js"></script>
 
 <!-- Deposit live preview (inline — no module needed) -->
@@ -534,21 +535,20 @@
     if (amountInput) {
       amountInput.addEventListener('input', function () {
         const amount  = parseFloat(this.value) || 0;
-        const coins   = Math.floor(amount / 0.10);
+        const coins   = Math.floor(amount * (window._sosRate||32000));
         const preview = document.getElementById('dep_preview_coins');
         const hint    = document.getElementById('dep_coins_preview');
         const usdEl   = document.getElementById('wallet-usd-equiv');
+        const fmt     = window.sosFormat || (n => n.toLocaleString());
 
-        if (preview) preview.textContent = coins > 0 ? coins.toLocaleString() : '—';
+        if (preview) preview.textContent = coins > 0 ? fmt(coins) : '—';
         if (hint)    hint.textContent    = coins > 0
-          ? `🪙 ${coins.toLocaleString()} coins la helayaa`
-          : '🪙 Coins la helayo: —';
+          ? ` ${fmt(coins)} SOS la helayaa`
+          : ' SOS la helayo: —';
       });
     }
   });
 </script>
-<script src="js/nav.js"></script>
 
-<script type="module" src="js/app.js"></script>
 </body>
 </html>

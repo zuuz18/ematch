@@ -24,7 +24,7 @@
     <div class="logo">eMatch</div>
     <div class="header-actions">
       <!-- Coin Chip -->
-      <div class="coin-chip"
+      <div class="sos-chip"
         onclick="window.location.href='wallet.html'"
         title="Wallet-kaaga fur"
         role="button"
@@ -36,7 +36,7 @@
           <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
           <line x1="12" y1="17" x2="12.01" y2="17"/>
         </svg>
-        🪙 <span class="coin-balance-display">—</span>
+         <span class="sos-balance-display">—</span>
       </div>
       <!-- Avatar -->
       <div class="avatar"
@@ -59,7 +59,7 @@
       <div class="carousel-item c1">
         <div class="carousel-text">
           <h3>🏆 Weekend Tournament</h3>
-          <p>FIFA · 1,000 coins Prize Pool</p>
+          <p>FIFA · 1 kun SOS Prize Pool</p>
         </div>
       </div>
       <div class="carousel-item c2">
@@ -71,7 +71,7 @@
       <div class="carousel-item c3">
         <div class="carousel-text">
           <h3>🎯 Free Fire League</h3>
-          <p>Heer: Pro · 500 coins entry</p>
+          <p>Heer: Pro · 500 SOS entry</p>
         </div>
       </div>
     </section>
@@ -83,7 +83,7 @@
           <div>
             <div class="balance-label">Lacagtaada</div>
             <div style="font-size:24px;font-weight:900;color:var(--accent-green);margin-top:4px">
-              🪙 <span class="coin-balance-display">—</span>
+               <span class="sos-balance-display">—</span>
             </div>
           </div>
           <button
@@ -416,7 +416,7 @@
 
       <!-- Stake Coins -->
       <div class="form-group">
-        <label for="cm_stake">Stake Coins 🪙</label>
+        <label for="cm_stake">Stake SOS </label>
         <div class="input-wrap">
           <svg class="input-icon" xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -435,14 +435,14 @@
         </div>
         <div class="error-msg" id="cm_stake_err" role="alert" aria-live="polite"></div>
         <div class="field-hint">
-          Ugu yaraan 10 coins · Lacagtaada: 🪙 <span class="coin-balance-display">—</span>
+          Ugu yaraan 8 kun SOS · Lacagtaada:  <span class="sos-balance-display">—</span>
         </div>
       </div>
 
       <!-- Info Card -->
       <div class="card mb-md" style="background:rgba(0,230,118,.05);border-color:rgba(0,230,118,.2)">
         <div style="font-size:13px;color:var(--text-secondary)">
-          ℹ️ Match abuurtaadii, coins-kaaga escrow-ga ayaa lagu dhejin doonaa ilaa match-ku dhammaan.
+          ℹ️ Match abuurtaadii, SOS-gaaga escrow-ga ayaa lagu dhejin doonaa ilaa match-ku dhammaan.
           Adiga oo guulaystaa, labada ciil aad heli doontaa.
         </div>
       </div>
@@ -484,6 +484,8 @@
 </div>
 
 <!-- Firebase SDK -->
+<script src="js/sos-rate.js"></script>
+<script src="js/nav.js"></script>
 <script type="module" src="js/app.js"></script>
 
 <!-- Admin helper (inline — needs global scope) -->

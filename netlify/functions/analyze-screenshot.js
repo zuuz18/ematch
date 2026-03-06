@@ -2,7 +2,6 @@ exports.handler = async function(event) {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
-
   try {
     const { base64, mediaType, myUsername, oppUsername } = JSON.parse(event.body);
 
@@ -25,7 +24,7 @@ exports.handler = async function(event) {
               text: `Game result screenshot.
 Player 1: "${myUsername}"
 Player 2: "${oppUsername}"
-Reply ONLY with JSON no extra text:
+Reply ONLY with JSON (no extra text):
 {"winner":"player1","score_p1":0,"score_p2":0,"confidence":"high"}`
             }
           ]
@@ -42,7 +41,6 @@ Reply ONLY with JSON no extra text:
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(result)
     };
-
   } catch (err) {
     return {
       statusCode: 500,

@@ -1,373 +1,637 @@
 <!DOCTYPE html>
 <html lang="so" dir="ltr">
 <head>
-  <link rel="icon" href="img/ematch-logo.svg">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#0d1117">
-  <meta name="description" content="eMatch — Ciyaar, Tartam, Guuleeso">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>eMatch — Gal</title>
+  <title>eMatch — Admin</title>
   <link rel="stylesheet" href="css/style.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎮</text></svg>">
-  <script>
-(function(){
-  document.documentElement.style.visibility = 'hidden';
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛡️</text></svg>">
+  <style>
 
-  var st = document.createElement('style');
-  st.textContent = `
-    #ematch-loader {
-      position:fixed;inset:0;z-index:99999;
-      background:#0d1117;
-      display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px;
-      transition:opacity 400ms ease;
+    /* ── Admin Variables ──────────────────────────────── */
+    :root {
+      --admin-gold:   #ffd700;
+      --admin-red:    #ef4444;
+      --admin-green:  #00e676;
+      --admin-blue:   #3b82f6;
+      --admin-purple: #a855f7;
     }
-    #ematch-loader::before {
-      content:'';position:absolute;inset:0;
+
+    /* ── Hero ─────────────────────────────────────────── */
+    .admin-hero {
+      background: linear-gradient(135deg, #0d1117 0%, #1a0a2e 60%, #0d1a2e 100%);
+      padding: var(--sp-xl) var(--sp-md) var(--sp-md);
+      position: relative;
+      overflow: hidden;
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .admin-hero::before {
+      content: '';
+      position: absolute; inset: 0;
       background:
-        radial-gradient(ellipse 60% 50% at 20% 40%,rgba(0,230,118,.10) 0%,transparent 70%),
-        radial-gradient(ellipse 50% 60% at 80% 60%,rgba(59,130,246,.08) 0%,transparent 70%);
-      pointer-events:none;
+        radial-gradient(circle at 10% 50%, rgba(168,85,247,.12) 0%, transparent 55%),
+        radial-gradient(circle at 90% 30%, rgba(59,130,246,.10) 0%, transparent 55%);
+      pointer-events: none;
     }
-    @keyframes emSpin  { to { transform:rotate(360deg); } }
-    @keyframes emPulse { 0%,100%{transform:scale(1);opacity:1;} 50%{transform:scale(.9);opacity:.7;} }
-    @keyframes emDot   { 0%,80%,100%{transform:scale(1);opacity:.15;} 40%{transform:scale(1.5);opacity:.7;} }
-    .em-ring      { position:relative;width:88px;height:88px; }
-    .em-ring svg  { position:absolute;inset:0;animation:emSpin 1.4s linear infinite; }
-    .em-ring-icon { position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:32px;animation:emPulse 2s ease-in-out infinite; }
-    .em-brand     { font-size:28px;font-weight:900;letter-spacing:-1px;background:linear-gradient(135deg,#00e676,#3b82f6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text; }
-    .em-tag       { font-size:11px;font-weight:500;color:rgba(255,255,255,.3);letter-spacing:3px;text-transform:uppercase; }
-    .em-prog-wrap { width:160px;height:2px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;margin-top:12px; }
-    .em-prog-bar  { height:100%;width:0%;background:linear-gradient(90deg,#00e676,#3b82f6);border-radius:99px;transition:width 220ms linear;box-shadow:0 0 8px rgba(0,230,118,.5); }
-    .em-status    { font-size:11px;color:rgba(255,255,255,.25);letter-spacing:.5px;margin-top:10px;min-height:16px; }
-    .em-dots      { position:absolute;bottom:44px;left:50%;transform:translateX(-50%);display:flex;gap:6px; }
-    .em-dot       { width:4px;height:4px;border-radius:50%;background:rgba(255,255,255,.15);animation:emDot 1.4s ease-in-out infinite; }
-    .em-dot:nth-child(2){animation-delay:.18s;}
-    .em-dot:nth-child(3){animation-delay:.36s;}
-  `;
-  document.head.appendChild(st);
+    .admin-hero-inner {
+      position: relative; z-index: 1;
+      display: flex; align-items: center; gap: var(--sp-md);
+    }
+    .admin-shield {
+      width: 52px; height: 52px;
+      border-radius: var(--r-md);
+      background: linear-gradient(135deg, rgba(168,85,247,.3), rgba(59,130,246,.3));
+      border: 1px solid rgba(168,85,247,.4);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+      box-shadow: 0 0 24px rgba(168,85,247,.2);
+    }
+    .admin-hero h1 {
+      font-size: 20px; font-weight: 900;
+      background: linear-gradient(135deg, #a855f7, #3b82f6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 2px;
+    }
+    .admin-hero p {
+      font-size: 12px; color: var(--text-muted); margin: 0;
+    }
 
-  var el = document.createElement('div');
-  el.id = 'ematch-loader';
-  el.innerHTML = `
-    <div style="position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:0">
-      <div class="em-ring" style="margin-bottom:24px">
-        <svg viewBox="0 0 88 88">
-          <defs>
-            <linearGradient id="emGrad" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%"   stop-color="#00e676"/>
-              <stop offset="100%" stop-color="#3b82f6"/>
-            </linearGradient>
-          </defs>
-          <circle cx="44" cy="44" r="40" fill="none" stroke="rgba(255,255,255,.06)" stroke-width="2.5"/>
-          <circle cx="44" cy="44" r="40" fill="none" stroke="url(#emGrad)"
-            stroke-width="2.5" stroke-linecap="round" stroke-dasharray="60 220"/>
-        </svg>
-        <div class="em-ring-icon">🎮</div>
-      </div>
-      <div class="em-brand">eMatch</div>
-      <div class="em-tag">Gaming Arena</div>
-      <div class="em-prog-wrap"><div class="em-prog-bar" id="em-bar"></div></div>
-      <div class="em-status" id="em-txt">Xogta la soo qaadayaa...</div>
-    </div>
-    <div class="em-dots">
-      <div class="em-dot"></div>
-      <div class="em-dot"></div>
-      <div class="em-dot"></div>
-    </div>`;
+    /* ── Tab Bar ──────────────────────────────────────── */
+    .admin-tabs {
+      display: flex;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--glass-border);
+      position: sticky;
+      top: 56px;
+      z-index: 80;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    .admin-tabs::-webkit-scrollbar { display: none; }
+    .admin-tab {
+      flex: 1;
+      min-width: 70px;
+      padding: 12px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-align: center;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: all var(--dur-fast) var(--ease);
+      white-space: nowrap;
+      user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .admin-tab.active {
+      color: var(--admin-purple);
+      border-bottom-color: var(--admin-purple);
+    }
+    .admin-tab .tab-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+    .admin-tab .tab-badge {
+      display: inline-flex; align-items: center; justify-content: center;
+      background: var(--admin-red);
+      color: #fff;
+      font-size: 9px; font-weight: 800;
+      min-width: 16px; height: 16px;
+      border-radius: var(--r-full);
+      padding: 0 4px;
+      margin-left: 3px;
+      vertical-align: middle;
+    }
 
-  document.addEventListener('DOMContentLoaded', function(){
-    document.documentElement.style.visibility = 'visible';
-    document.body.insertBefore(el, document.body.firstChild);
-    var bar = document.getElementById('em-bar');
-    var txt = document.getElementById('em-txt');
-    var steps = [
-      {p:20, t:'Xogta la soo qaadayaa...',  d:0   },
-      {p:45, t:'Firebase la xiriiraya...',   d:300 },
-      {p:70, t:'Xisaabta la hubinayaa...',  d:700 },
-      {p:88, t:'Diyaargarowga...',           d:1100},
-      {p:100,t:'Ku soo dhawow! ✅',          d:1400}
-    ];
-    steps.forEach(function(s){
-      setTimeout(function(){
-        if(bar) bar.style.width = s.p+'%';
-        if(txt) txt.textContent = s.t;
-      }, s.d);
-    });
-  });
+    /* ── Tab Content ──────────────────────────────────── */
+    .admin-panel { display: none; }
+    .admin-panel.active { display: block; }
 
-  window._hideLoader = function(){
-    var el = document.getElementById('ematch-loader');
-    if(!el) return;
-    el.style.opacity = '0';
-    setTimeout(function(){ if(el.parentNode) el.remove(); }, 420);
-  };
+    /* ── Stats Grid ───────────────────────────────────── */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--sp-sm);
+      padding: var(--sp-md);
+    }
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-md);
+      padding: var(--sp-md);
+      position: relative;
+      overflow: hidden;
+      animation: statIn .4s var(--ease) both;
+    }
+    .stat-card:nth-child(1) { animation-delay: .05s; }
+    .stat-card:nth-child(2) { animation-delay: .10s; }
+    .stat-card:nth-child(3) { animation-delay: .15s; }
+    .stat-card:nth-child(4) { animation-delay: .20s; }
+    .stat-card:nth-child(5) { animation-delay: .25s; }
+    .stat-card:nth-child(6) { animation-delay: .30s; }
+    @keyframes statIn {
+      from { opacity:0; transform:translateY(12px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    .stat-card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    }
+    .stat-card.gold::before   { background: linear-gradient(90deg, var(--admin-gold), transparent); }
+    .stat-card.green::before  { background: linear-gradient(90deg, var(--admin-green), transparent); }
+    .stat-card.blue::before   { background: linear-gradient(90deg, var(--admin-blue), transparent); }
+    .stat-card.red::before    { background: linear-gradient(90deg, var(--admin-red), transparent); }
+    .stat-card.purple::before { background: linear-gradient(90deg, var(--admin-purple), transparent); }
 
-  window.addEventListener('load', function(){
-    setTimeout(function(){
-      if(document.getElementById('ematch-loader')) window._hideLoader();
-    }, 5000);
-  });
+    .stat-icon {
+      font-size: 22px; margin-bottom: var(--sp-sm);
+      display: block;
+    }
+    .stat-value {
+      font-size: 24px; font-weight: 900;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+    .stat-label {
+      font-size: 11px; color: var(--text-muted);
+    }
 
-})();
-</script>
+    /* ── Section Header ───────────────────────────────── */
+    .section-hdr {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-md) var(--sp-md) var(--sp-sm);
+    }
+    .section-hdr h2 { font-size: 14px; font-weight: 800; }
+    .section-hdr .count-badge {
+      font-size: 11px; font-weight: 700;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      padding: 2px 8px;
+      border-radius: var(--r-full);
+      color: var(--text-muted);
+    }
+
+    /* ── Deposit Card ─────────────────────────────────── */
+    .dep-card {
+      margin: 0 var(--sp-md) var(--sp-sm);
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      animation: statIn .3s var(--ease) both;
+    }
+    .dep-card-head {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-sm) var(--sp-md);
+      background: rgba(255,255,255,.02);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .dep-card-coins {
+      font-size: 18px; font-weight: 900;
+      color: var(--admin-gold);
+    }
+    .dep-card-body {
+      padding: var(--sp-sm) var(--sp-md);
+    }
+    .dep-card-row {
+      display: flex; align-items: center; gap: 8px;
+      font-size: 12px; color: var(--text-secondary);
+      margin-bottom: 6px;
+    }
+    .dep-card-row:last-child { margin-bottom: 0; }
+    .dep-ussd {
+      font-family: monospace;
+      font-size: 11px;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: 6px 10px;
+      color: var(--admin-green);
+      word-break: break-all;
+      margin: var(--sp-sm) 0;
+    }
+    .dep-actions {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: var(--sp-sm);
+      padding: var(--sp-sm) var(--sp-md) var(--sp-md);
+    }
+
+    /* ── Match Admin Card ─────────────────────────────── */
+    .match-admin-card {
+      margin: 0 var(--sp-md) var(--sp-sm);
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-md);
+      overflow: hidden;
+      animation: statIn .3s var(--ease) both;
+    }
+    .match-admin-head {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-sm) var(--sp-md);
+      border-bottom: 1px solid var(--glass-border);
+      background: rgba(255,255,255,.02);
+    }
+    .match-admin-title {
+      font-size: 13px; font-weight: 700;
+    }
+    .match-admin-body {
+      padding: var(--sp-sm) var(--sp-md);
+    }
+    .vs-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      gap: var(--sp-sm);
+      margin-bottom: var(--sp-sm);
+    }
+    .vs-player {
+      flex: 1;
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      border-radius: var(--r-sm);
+      padding: var(--sp-sm);
+      text-align: center;
+      cursor: pointer;
+      transition: all var(--dur-fast) var(--ease);
+    }
+    .vs-player:active { opacity: .7; }
+    .vs-player.selected {
+      border-color: var(--admin-gold);
+      background: rgba(255,215,0,.08);
+    }
+    .vs-player-avatar {
+      width: 36px; height: 36px;
+      border-radius: 50%;
+      display: flex; align-items: center;
+      justify-content: center;
+      font-size: 14px; font-weight: 900;
+      color: #000;
+      margin: 0 auto 6px;
+    }
+    .vs-player-uid {
+      font-size: 10px; color: var(--text-muted);
+    }
+    .vs-label {
+      font-size: 13px; font-weight: 900;
+      color: var(--text-muted);
+    }
+    .match-admin-prize {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: var(--text-secondary);
+      margin-bottom: var(--sp-sm);
+    }
+    .match-admin-prize span:last-child {
+      font-weight: 800; color: var(--admin-gold);
+    }
+
+    /* ── User Card ────────────────────────────────────── */
+    .user-card {
+      margin: 0 var(--sp-md) var(--sp-sm);
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-md);
+      padding: var(--sp-md);
+      display: flex;
+      align-items: center;
+      gap: var(--sp-md);
+      animation: statIn .3s var(--ease) both;
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .user-card:active { opacity: .8; }
+    .user-avatar-lg {
+      width: 44px; height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--admin-purple), var(--admin-blue));
+      display: flex; align-items: center;
+      justify-content: center;
+      font-size: 16px; font-weight: 900; color: #fff;
+      flex-shrink: 0;
+    }
+    .user-info { flex: 1; min-width: 0; }
+    .user-name {
+      font-size: 14px; font-weight: 700;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-email {
+      font-size: 11px; color: var(--text-muted);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .user-meta {
+      display: flex; gap: 6px; margin-top: 4px;
+    }
+    .user-coins-tag {
+      font-size: 10px; font-weight: 700;
+      background: rgba(255,215,0,.1);
+      border: 1px solid rgba(255,215,0,.2);
+      color: var(--admin-gold);
+      padding: 1px 6px;
+      border-radius: var(--r-full);
+    }
+    .user-role-tag {
+      font-size: 10px; font-weight: 700;
+      padding: 1px 6px;
+      border-radius: var(--r-full);
+    }
+    .role-owner         { background:rgba(168,85,247,.12); color:var(--admin-purple); border:1px solid rgba(168,85,247,.25); }
+    .role-administrator { background:rgba(59,130,246,.12);  color:var(--admin-blue);   border:1px solid rgba(59,130,246,.25); }
+    .role-user          { background:rgba(255,255,255,.05); color:var(--text-muted);   border:1px solid var(--border); }
+
+    /* ── Search Bar ───────────────────────────────────── */
+    .admin-search {
+      margin: var(--sp-md) var(--sp-md) var(--sp-sm);
+      position: relative;
+    }
+    .admin-search input {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-md);
+      padding: 10px 14px 10px 38px;
+      font-size: 13px;
+      color: var(--text-primary);
+      font-family: inherit;
+    }
+    .admin-search-icon {
+      position: absolute; left: 12px; top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted); font-size: 15px;
+    }
+
+    /* ── Empty State ──────────────────────────────────── */
+    .admin-empty {
+      text-align: center;
+      padding: 40px var(--sp-md);
+      color: var(--text-muted);
+    }
+    .admin-empty .icon { font-size: 40px; margin-bottom: 12px; }
+    .admin-empty p { font-size: 13px; }
+
+    /* ── User Detail Modal ────────────────────────────── */
+    .user-detail-row {
+      display: flex; align-items: center;
+      justify-content: space-between;
+      padding: var(--sp-sm) 0;
+      border-bottom: 1px solid var(--glass-border);
+      font-size: 13px;
+    }
+    .user-detail-row:last-child { border-bottom: none; }
+    .user-detail-label { color: var(--text-muted); }
+    .user-detail-value { font-weight: 600; }
+
+    /* ── Live pulse ───────────────────────────────────── */
+    @keyframes livePulse {
+      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.4); }
+      50%      { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
+    }
+    .live-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: var(--admin-red);
+      animation: livePulse 1.5s ease-in-out infinite;
+      display: inline-block;
+      margin-right: 4px;
+    }
+
+    /* ── Refresh btn ──────────────────────────────────── */
+    .refresh-btn {
+      background: none; border: none;
+      color: var(--text-muted);
+      cursor: pointer; padding: 4px;
+      border-radius: var(--r-sm);
+      transition: color var(--dur-fast);
+    }
+    .refresh-btn:active { color: var(--admin-purple); }
+
+    /* ── Filter chips ─────────────────────────────────── */
+    .admin-filter-row {
+      display: flex; gap: var(--sp-sm);
+      padding: 0 var(--sp-md) var(--sp-sm);
+      overflow-x: auto; scrollbar-width: none;
+    }
+    .admin-filter-row::-webkit-scrollbar { display: none; }
+    .admin-chip {
+      flex-shrink: 0;
+      font-size: 11px; font-weight: 700;
+      padding: 5px 12px;
+      border-radius: var(--r-full);
+      background: var(--bg-card2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--dur-fast) var(--ease);
+    }
+    .admin-chip.active {
+      background: rgba(168,85,247,.15);
+      border-color: rgba(168,85,247,.4);
+      color: var(--admin-purple);
+    }
+
+    /* back btn */
+    .back-btn {
+      display: flex; align-items: center; gap: 6px;
+      background: none; border: none;
+      color: var(--text-secondary);
+      font-size: 14px; font-weight: 600;
+      cursor: pointer; padding: 0;
+      font-family: inherit;
+    }
+    .back-btn:active { opacity: .7; }
+
+  </style>
 </head>
 <body>
 <div id="app">
 
   <!-- Offline Banner -->
-  <div id="offline-banner" class="offline-banner hidden" role="alert" aria-live="assertive">
-    📵 Internetka kuma xidna — gal ka dib markii xiriirku soo laabto
+  <div id="offline-banner" class="offline-banner hidden" role="alert">
+    📵 Internetka kuma xidna
   </div>
 
-  <div class="auth-page">
+  <!-- Top Header -->
+  <header class="top-header">
+    <button class="back-btn" onclick="history.back()">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
+        viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+        <polyline points="15 18 9 12 15 6"/>
+      </svg>
+      Dib
+    </button>
+    <div style="font-size:15px;font-weight:800">🛡️ Admin</div>
+    <div class="sos-chip" onclick="window.location.href='wallet.html'"
+      role="button" tabindex="0">
+       <span class="sos-balance-display">—</span>
+    </div>
+  </header>
 
-    <!-- ── Hero ──────────────────────────────────────────── -->
-    <div class="auth-hero">
-      <span class="auth-logo">eMatch</span>
-      <p class="auth-tagline">Ciyaar · Tartam · Guuleeso 🏆</p>
+  <main class="page-content" role="main">
+
+    <!-- Hero -->
+    <div class="admin-hero">
+      <div class="admin-hero-inner">
+        <div class="admin-shield">🛡️</div>
+        <div>
+          <h1>Admin Dashboard</h1>
+          <p id="admin-uid-display">Xisaabta admin-ka</p>
+        </div>
+      </div>
     </div>
 
-    <!-- ── Auth Card ─────────────────────────────────────── -->
-    <div class="auth-card">
-
-      <!-- Tab Bar -->
-      <div class="tab-bar" role="tablist">
-        <button class="tab-btn active" data-tab="login"
-          role="tab" aria-selected="true" aria-controls="tab-login">
-          Gal
-        </button>
-        <button class="tab-btn" data-tab="register"
-          role="tab" aria-selected="false" aria-controls="tab-register">
-          Qorso
-        </button>
+    <!-- Tab Bar -->
+    <div class="admin-tabs">
+      <div class="admin-tab active" data-tab="stats" onclick="switchTab('stats')">
+        <span class="tab-icon">📊</span>Stats
       </div>
-
-      <!-- ════ LOGIN TAB ════════════════════════════════════ -->
-      <div id="tab-login" class="tab-content" data-tab="login" role="tabpanel">
-        <form id="login-form" novalidate autocomplete="on">
-
-          <!-- Email -->
-          <div class="form-group">
-            <label for="login_email">Email</label>
-            <div class="input-wrap">
-              <svg class="input-icon" xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
-              </svg>
-              <input
-                type="email"
-                id="login_email"
-                name="email"
-                placeholder="magac@email.com"
-                autocomplete="email"
-                inputmode="email"
-                aria-label="Email-kaaga"
-                aria-describedby="login_email_err"
-                required>
-            </div>
-            <div class="error-msg" id="login_email_err" role="alert" aria-live="polite"></div>
-          </div>
-
-          <!-- Password -->
-          <div class="form-group">
-            <label for="login_password">Password</label>
-            <div class="input-wrap">
-              <svg class="input-icon" xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <input
-                type="password"
-                id="login_password"
-                name="password"
-                placeholder="Password-kaaga"
-                autocomplete="current-password"
-                aria-label="Password"
-                aria-describedby="login_password_err"
-                required>
-              <button type="button" class="pw-toggle" aria-label="Password muuji ama qari">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              </button>
-            </div>
-            <div class="error-msg" id="login_password_err" role="alert" aria-live="polite"></div>
-          </div>
-
-          <!-- Submit -->
-          <button type="submit" class="btn btn-primary" id="btn_login">
-            <span class="btn-text">Gal →</span>
-            <div class="btn-spinner"></div>
-          </button>
-
-          <!-- Forgot Password -->
-          <button type="button" class="btn btn-ghost mt-sm" id="btn_forgot_pw">
-            🔑 Password-ka waan illoobay
-          </button>
-
-        </form>
-
-        <!-- Divider -->
-        <div class="social-divider">ama</div>
-
-        <!-- Google Sign In -->
-        <button class="btn btn-secondary" id="btn_google" type="button">
-          <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-          </svg>
-          Google-ka ku Gal
-        </button>
+      <div class="admin-tab" data-tab="deposits" onclick="switchTab('deposits')">
+        <span class="tab-icon">💰</span>Deposits
+        <span class="tab-badge" id="dep-badge" style="display:none">0</span>
       </div>
-
-      <!-- ════ REGISTER TAB ══════════════════════════════════ -->
-      <div id="tab-register" class="tab-content hidden" data-tab="register" role="tabpanel">
-        <form id="register-form" novalidate autocomplete="on">
-
-          <!-- Full Name -->
-          <div class="form-group">
-            <label for="reg_fullName">Magaca Buuxa</label>
-            <div class="input-wrap">
-              <svg class="input-icon" xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-                <circle cx="12" cy="7" r="4"/>
-              </svg>
-              <input
-                type="text"
-                id="reg_fullName"
-                name="fullName"
-                placeholder="Magacaaga oo dhan"
-                autocomplete="name"
-                aria-label="Magacaaga buuxa"
-                aria-describedby="reg_fullName_err"
-                required>
-            </div>
-            <div class="error-msg" id="reg_fullName_err" role="alert" aria-live="polite"></div>
-          </div>
-
-          <!-- Email -->
-          <div class="form-group">
-            <label for="reg_email">Email</label>
-            <div class="input-wrap">
-              <svg class="input-icon" xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-                <polyline points="22,6 12,13 2,6"/>
-              </svg>
-              <input
-                type="email"
-                id="reg_email"
-                name="email"
-                placeholder="magac@email.com"
-                autocomplete="email"
-                inputmode="email"
-                aria-label="Email-kaaga"
-                aria-describedby="reg_email_err"
-                required>
-            </div>
-            <div class="error-msg" id="reg_email_err" role="alert" aria-live="polite"></div>
-          </div>
-
-          <!-- Phone -->
-          <div class="form-group">
-            <label for="reg_phone">Telefon</label>
-            <div class="input-wrap">
-              <svg class="input-icon" xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 13 19.79 19.79 0 0 1 1.61 4.35 2 2 0 0 1 3.6 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.08 6.08l.94-.94a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-              </svg>
-              <input
-                type="tel"
-                id="reg_phone"
-                name="phone"
-                placeholder="+252 61 234 5678"
-                autocomplete="tel"
-                inputmode="tel"
-                aria-label="Lambarka telefonka"
-                aria-describedby="reg_phone_err"
-                required>
-            </div>
-            <div class="error-msg" id="reg_phone_err" role="alert" aria-live="polite"></div>
-            <div class="field-hint">Tusaale: +252 61 234 5678</div>
-          </div>
-
-          <!-- Password -->
-          <div class="form-group">
-            <label for="reg_password">Password</label>
-            <div class="input-wrap">
-              <svg class="input-icon" xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
-                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-              </svg>
-              <input
-                type="password"
-                id="reg_password"
-                name="new-password"
-                placeholder="Ugu yaraan 8 xaraf"
-                autocomplete="new-password"
-                aria-label="Password cusub"
-                aria-describedby="reg_password_err"
-                required>
-              <button type="button" class="pw-toggle" aria-label="Password muuji ama qari">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-                  viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                  <circle cx="12" cy="12" r="3"/>
-                </svg>
-              </button>
-            </div>
-            <div class="error-msg" id="reg_password_err" role="alert" aria-live="polite"></div>
-            <div class="field-hint">Ugu yaraan 8 xaraf — awood leh isticmaal</div>
-          </div>
-
-          <!-- Submit -->
-          <button type="submit" class="btn btn-primary" id="btn_register">
-            <span class="btn-text">✦ Xisaab Abuur</span>
-            <div class="btn-spinner"></div>
-          </button>
-
-        </form>
-
-        <!-- Divider -->
-        <div class="social-divider">ama</div>
-
-        <!-- Google Register -->
-        <button class="btn btn-secondary" type="button"
-          onclick="document.getElementById('btn_google').click()">
-          <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-          </svg>
-          Google-ka ku Qorso
-        </button>
+      <div class="admin-tab" data-tab="matches" onclick="switchTab('matches')">
+        <span class="tab-icon">🎮</span>Matches
       </div>
-
+      <div class="admin-tab" data-tab="users" onclick="switchTab('users')">
+        <span class="tab-icon">👥</span>Users
+      </div>
     </div>
-    <!-- /auth-card -->
 
-    <p class="text-center text-muted mt-md" style="font-size:12px;padding-bottom:32px">
-      📱 eMatch v1.0 &nbsp;·&nbsp; Shuruucda oo dhami waxay daboolaan privacy-gaaga
-    </p>
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- TAB 1: STATS                                    -->
+    <!-- ════════════════════════════════════════════════ -->
+    <div class="admin-panel active" id="panel-stats">
+      <div class="stats-grid">
+        <div class="stat-card gold">
+          <span class="stat-icon"></span>
+          <div class="stat-value" id="s-total-coins">—</div>
+          <div class="stat-label">Coins Oo Dhan</div>
+        </div>
+        <div class="stat-card blue">
+          <span class="stat-icon">👥</span>
+          <div class="stat-value" id="s-total-users">—</div>
+          <div class="stat-label">Isticmaalayaasha</div>
+        </div>
+        <div class="stat-card green">
+          <span class="stat-icon">🎮</span>
+          <div class="stat-value" id="s-total-matches">—</div>
+          <div class="stat-label">Matches Oo Dhan</div>
+        </div>
+        <div class="stat-card red">
+          <span class="stat-icon">🔴</span>
+          <div class="stat-value" id="s-live-matches">—</div>
+          <div class="stat-label">Live Hadda</div>
+        </div>
+        <div class="stat-card purple">
+          <span class="stat-icon">💰</span>
+          <div class="stat-value" id="s-pending-deps">—</div>
+          <div class="stat-label">Deposits Sugaya</div>
+        </div>
+        <div class="stat-card gold">
+          <span class="stat-icon">🏆</span>
+          <div class="stat-value" id="s-total-wins">—</div>
+          <div class="stat-label">Guulaha Oo Dhan</div>
+        </div>
+      </div>
 
+      <!-- Recent Activity -->
+      <div class="section-hdr">
+        <h2>⚡ Dhaqdhaqaaqa Dambe</h2>
+        <button class="refresh-btn" onclick="loadStats()">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polyline points="23 4 23 10 17 10"/>
+            <path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
+          </svg>
+        </button>
+      </div>
+      <div id="recent-activity" style="padding:0 var(--sp-md) var(--sp-xl)">
+        <div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div>
+      </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- TAB 2: DEPOSITS                                 -->
+    <!-- ════════════════════════════════════════════════ -->
+    <div class="admin-panel" id="panel-deposits">
+      <div class="admin-filter-row">
+        <div class="admin-chip active" data-depfilter="pending"  onclick="setDepFilter('pending')">⏳ Sugaya</div>
+        <div class="admin-chip"        data-depfilter="approved" onclick="setDepFilter('approved')">✅ La Ogolaaday</div>
+        <div class="admin-chip"        data-depfilter="rejected" onclick="setDepFilter('rejected')">❌ La Diidey</div>
+      </div>
+      <div class="section-hdr">
+        <h2>💰 Deposit Requests</h2>
+        <span class="count-badge" id="dep-count">0</span>
+      </div>
+      <div id="deposits-list">
+        <div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div>
+      </div>
+      <div style="height:var(--sp-xl)"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- TAB 3: MATCHES                                  -->
+    <!-- ════════════════════════════════════════════════ -->
+    <div class="admin-panel" id="panel-matches">
+      <div class="admin-filter-row">
+        <div class="admin-chip active" data-matchfilter="locked" onclick="setMatchFilter('locked')"><span class="live-dot"></span>Live</div>
+        <div class="admin-chip"        data-matchfilter="open"   onclick="setMatchFilter('open')">⏳ Furan</div>
+        <div class="admin-chip"        data-matchfilter="done"   onclick="setMatchFilter('done')">✅ Dhammaaday</div>
+      </div>
+      <div class="section-hdr">
+        <h2>🎮 Matches</h2>
+        <span class="count-badge" id="match-count">0</span>
+      </div>
+      <div id="matches-admin-list">
+        <div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div>
+      </div>
+      <div style="height:var(--sp-xl)"></div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════ -->
+    <!-- TAB 4: USERS                                    -->
+    <!-- ════════════════════════════════════════════════ -->
+    <div class="admin-panel" id="panel-users">
+      <div class="admin-search">
+        <span class="admin-search-icon">🔍</span>
+        <input type="text" id="user-search" placeholder="Magac ama email ka raadi..."
+          oninput="filterUsers(this.value)">
+      </div>
+      <div class="section-hdr">
+        <h2>👥 Isticmaalayaasha</h2>
+        <span class="count-badge" id="user-count">0</span>
+      </div>
+      <div id="users-list">
+        <div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div>
+      </div>
+      <div style="height:var(--sp-xl)"></div>
+    </div>
+
+  </main>
+
+  <!-- ── User Detail Modal ──────────────────────────────── -->
+  <div class="modal-overlay" id="user-modal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div id="user-modal-content">
+        <div class="skeleton sk-block mb-md"></div>
+      </div>
+    </div>
   </div>
-  <!-- /auth-page -->
+
+  <!-- ── Confirm Winner Modal ───────────────────────────── -->
+  <div class="modal-overlay" id="winner-modal">
+    <div class="modal-sheet">
+      <div class="modal-handle"></div>
+      <div id="winner-modal-content"></div>
+    </div>
+  </div>
 
 </div>
-<!-- /app -->
 
-<!-- Firebase SDK (ES Modules) -->
+<script src="js/sos-rate.js"></script>
+<script src="js/nav.js"></script>
 <script type="module" src="js/app.js"></script>
+<script src="js/admin.js"></script>
 </body>
 </html>

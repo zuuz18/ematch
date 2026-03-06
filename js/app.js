@@ -1,9 +1,5 @@
 // ============================================================
-// eMatch — js/app.js  (Updated — v2.0)
-// Supports: index.html, dashboard.html, wallet.html,
-//           profile.html, matches.html
-// ============================================================
-// ⚠️  FIREBASE CONFIG: Ku dar config-gaaga hoos
+// eMatch — js/app.js  (v2.1 — logout fix)
 // ============================================================
 
 import { initializeApp } from
@@ -31,7 +27,6 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── 1. FIREBASE CONFIG ─────────────────────────────────────
-// 🔴 Halkan ku beddel config-gaaga Firebase-ka
 const firebaseConfig = {
   apiKey: "AIzaSyAW921oL1KTEk5n75xWvfGWM4Ab1SKnpbg",
   authDomain: "ematch-bb818.firebaseapp.com",
@@ -46,7 +41,6 @@ const app  = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db   = getFirestore(app);
 
-// Session persistence
 setPersistence(auth, browserLocalPersistence);
 
 // ── 2. GLOBAL STATE ────────────────────────────────────────
@@ -54,14 +48,13 @@ let currentUser     = null;
 let currentUserData = null;
 let isOnline        = navigator.onLine;
 
-// ── 3. EXPOSE GLOBALS (profile.html + matches.html need) ───
+// ── 3. EXPOSE GLOBALS ──────────────────────────────────────
 window._ematch_config   = firebaseConfig;
 window._ematch_db       = db;
 window._ematch_uid      = null;
 window._ematch_userdata = null;
 
 // ── 4. UTILITIES ───────────────────────────────────────────
-
 function setLoading(btn, loading) {
   if (!btn) return;
   btn.classList.toggle('loading', loading);
@@ -78,49 +71,36 @@ function showError(fieldId, msg) {
 function clearErrors(formId) {
   const form = document.getElementById(formId);
   if (!form) return;
-  form.querySelectorAll('.input-error')
-      .forEach(el => el.classList.remove('input-error'));
-  form.querySelectorAll('.error-msg')
-      .forEach(el => el.textContent = '');
+  form.querySelectorAll('.input-error').forEach(el => el.classList.remove('input-error'));
+  form.querySelectorAll('.error-msg').forEach(el => el.textContent = '');
 }
 
 window.showToast = function(msg, type = 'info') {
   const existing = document.getElementById('toast');
   if (existing) existing.remove();
-
   const toast = document.createElement('div');
   toast.id = 'toast';
-
   const colors = {
     error:   'var(--accent-red)',
     success: 'var(--accent-green)',
     info:    'var(--bg-card2)',
     warning: 'var(--accent-gold)'
   };
-
   Object.assign(toast.style, {
-    position:    'fixed',
-    bottom:      '90px',
-    left:        '50%',
-    transform:   'translateX(-50%) translateY(20px)',
-    background:  colors[type] || colors.info,
-    color:       type === 'success' ? '#000' : '#fff',
-    padding:     '10px 20px',
-    borderRadius:'var(--r-full)',
-    fontSize:    '14px',
-    fontWeight:  '600',
-    zIndex:      '9999',
-    maxWidth:    '360px',
-    textAlign:   'center',
-    transition:  'all 240ms var(--ease)',
-    border:      '1px solid var(--glass-border)',
-    boxShadow:   '0 4px 20px rgba(0,0,0,.5)',
-    opacity:     '0',
-    pointerEvents:'none'
+    position: 'fixed', bottom: '90px', left: '50%',
+    transform: 'translateX(-50%) translateY(20px)',
+    background: colors[type] || colors.info,
+    color: type === 'success' ? '#000' : '#fff',
+    padding: '10px 20px', borderRadius: 'var(--r-full)',
+    fontSize: '14px', fontWeight: '600', zIndex: '9999',
+    maxWidth: '360px', textAlign: 'center',
+    transition: 'all 240ms var(--ease)',
+    border: '1px solid var(--glass-border)',
+    boxShadow: '0 4px 20px rgba(0,0,0,.5)',
+    opacity: '0', pointerEvents: 'none'
   });
   toast.textContent = msg;
   document.body.appendChild(toast);
-
   requestAnimationFrame(() => {
     toast.style.transform = 'translateX(-50%) translateY(0)';
     toast.style.opacity   = '1';
@@ -149,8 +129,6 @@ window.closeModal = function(modalId) {
   document.body.style.overflow = '';
 };
 
-window.handleLogout = handleLogout;
-
 function requireOnline() {
   if (!isOnline) {
     showToast('Xiriirka internetka kuma jirto. Isku day markale.', 'error');
@@ -173,8 +151,7 @@ window.addEventListener('online',  updateOnlineStatus);
 window.addEventListener('offline', updateOnlineStatus);
 updateOnlineStatus();
 
-// ── 6. BOTTOM NAVIGATION — nav.js ayaa xukuma ─────────────
-// Modal xidh markii browser back la dhufo
+// ── 6. MODAL: CLOSE ON BACK ────────────────────────────────
 window.addEventListener('popstate', () => {
   const openModalEl = document.querySelector('.modal-overlay.open');
   if (openModalEl) {
@@ -184,14 +161,19 @@ window.addEventListener('popstate', () => {
 });
 
 // ── 7. AUTH GUARD ──────────────────────────────────────────
+// Returns the user if auth passes, null otherwise.
+// If requireAuth=true and no user → redirect to index.html
+// If requireAuth=false and user exists → redirect to redirectTo
 function authGuard(requireAuth, redirectTo = 'dashboard.html') {
   return new Promise(resolve => {
     const unsub = onAuthStateChanged(auth, async user => {
       unsub();
       if (requireAuth && !user) {
         window.location.replace('index.html');
+        resolve(null);
       } else if (!requireAuth && user) {
         window.location.replace(redirectTo);
+        resolve(user); // return user so caller knows redirect happened
       } else if (user) {
         currentUser = user;
         await loadUserData(user.uid);
@@ -208,44 +190,37 @@ async function loadUserData(uid) {
   try {
     const userRef = doc(db, 'users', uid);
     const snap    = await getDoc(userRef);
-
     if (snap.exists()) {
       currentUserData = snap.data();
     } else {
-      const user      = auth.currentUser;
+      const user = auth.currentUser;
       currentUserData = {
         uid,
-        fullName:      user?.displayName || 'User',
-        email:         user?.email       || '',
-        phone:         '',
-        role:          'user',
-        coinBalance:   0,
-        escrowBalance: 0,
-        createdAt:     serverTimestamp()
+        fullName:  user?.displayName || 'User',
+        email:     user?.email       || '',
+        phone:     '',
+        role:      'user',
+        sosBalance: 0,
+        escrowSOS:  0,
+        createdAt:  serverTimestamp()
       };
       await setDoc(userRef, currentUserData);
     }
-
-    // Expose globals for other modules
     window._ematch_uid      = uid;
     window._ematch_userdata = currentUserData;
-
     updateHeaderUI();
-
-    // Cache offline
     try {
       localStorage.setItem('ematch_user_cache', JSON.stringify({
         ...currentUserData,
         createdAt: currentUserData.createdAt?.toDate?.()?.toISOString() || null
       }));
     } catch (_) {}
-
     return currentUserData;
   } catch (err) {
     console.error('loadUserData:', err);
     const cached = localStorage.getItem('ematch_user_cache');
     if (cached) {
-      currentUserData = JSON.parse(cached);
+      currentUserData         = JSON.parse(cached);
       window._ematch_uid      = currentUserData.uid;
       window._ematch_userdata = currentUserData;
     }
@@ -255,23 +230,19 @@ async function loadUserData(uid) {
 // ── 9. UPDATE HEADER UI ────────────────────────────────────
 function updateHeaderUI() {
   if (!currentUserData) return;
-
+  const coins    = currentUserData.sosBalance || 0;
   const initials = (currentUserData.fullName || 'U')
     .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-
-  document.querySelectorAll('.avatar')
-    .forEach(a => { a.textContent = initials; });
-
-  document.querySelectorAll('.coin-balance-display')
-    .forEach(c => {
-      c.textContent = (currentUserData.coinBalance || 0).toLocaleString();
-    });
-
-  // Admin-only elements
+  document.querySelectorAll('.avatar').forEach(a => { a.textContent = initials; });
+  if (window._updateSosChip) {
+    window._updateSosChip(coins);
+  } else {
+    document.querySelectorAll('.sos-balance-display')
+      .forEach(c => { c.textContent = window.sosFormat ? window.sosFormat(coins) : coins.toLocaleString(); });
+  }
   const adminRoles = ['administrator', 'owner', 'partner_manager'];
   if (adminRoles.includes(currentUserData.role)) {
-    document.querySelectorAll('.admin-only')
-      .forEach(el => el.classList.remove('hidden'));
+    document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
     const adminPanel = document.getElementById('admin-panel');
     if (adminPanel) adminPanel.classList.remove('hidden');
   }
@@ -281,45 +252,32 @@ function updateHeaderUI() {
 async function handleSignup(e) {
   e.preventDefault();
   if (!requireOnline()) return;
-
   const fullName = document.getElementById('reg_fullName').value.trim();
   const email    = document.getElementById('reg_email').value.trim();
   const phone    = document.getElementById('reg_phone').value.trim();
   const password = document.getElementById('reg_password').value;
   const btn      = document.getElementById('btn_register');
-
   clearErrors('register-form');
-
   let valid = true;
-  if (!fullName || fullName.length < 2)
-    { showError('reg_fullName', 'Magaca oo buuxa geli'); valid = false; }
-  if (!validateEmail(email))
-    { showError('reg_email', 'Email-ka sax ma ahan'); valid = false; }
-  if (!validatePhone(phone))
-    { showError('reg_phone', 'Lambarka sax geli (+252...)'); valid = false; }
-  if (!validatePassword(password))
-    { showError('reg_password', 'Password-ku waa inuu ka badan yahay 8 xaraf'); valid = false; }
+  if (!fullName || fullName.length < 2) { showError('reg_fullName', 'Magaca oo buuxa geli'); valid = false; }
+  if (!validateEmail(email))            { showError('reg_email',    'Email-ka sax ma ahan'); valid = false; }
+  if (!validatePhone(phone))            { showError('reg_phone',    'Lambarka sax geli (+252...)'); valid = false; }
+  if (!validatePassword(password))      { showError('reg_password', 'Password-ku waa inuu ka badan yahay 8 xaraf'); valid = false; }
   if (!valid) return;
-
   setLoading(btn, true);
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, password);
     await setDoc(doc(db, 'users', cred.user.uid), {
-      uid:           cred.user.uid,
-      fullName,
-      email,
-      phone,
-      role:          'user',
-      coinBalance:   0,
-      escrowBalance: 0,
-      createdAt:     serverTimestamp()
+      uid: cred.user.uid, fullName, email, phone,
+      role: 'user', sosBalance: 0, escrowSOS: 0,
+      createdAt: serverTimestamp()
     });
     window.location.replace('dashboard.html');
   } catch (err) {
     setLoading(btn, false);
     const errorMap = {
       'auth/email-already-in-use': ['reg_email',    'Email-kani horey loo isticmaalay'],
-      'auth/weak-password':        ['reg_password',  'Password-ku aad ayuu u liita'],
+      'auth/weak-password':        ['reg_password', 'Password-ku aad ayuu u liita'],
       'auth/invalid-email':        ['reg_email',    'Email-ka foomka sax ma ahan']
     };
     const mapped = errorMap[err.code];
@@ -332,31 +290,20 @@ async function handleSignup(e) {
 async function handleLogin(e) {
   e.preventDefault();
   if (!requireOnline()) return;
-
   const email    = document.getElementById('login_email').value.trim();
   const password = document.getElementById('login_password').value;
   const btn      = document.getElementById('btn_login');
-
   clearErrors('login-form');
   if (!validateEmail(email)) { showError('login_email',    'Email-ka sax ma ahan'); return; }
   if (!password)             { showError('login_password', 'Password-ka geli');     return; }
-
   setLoading(btn, true);
   try {
     await signInWithEmailAndPassword(auth, email, password);
-    // onAuthStateChanged handles redirect
   } catch (err) {
     setLoading(btn, false);
-    const badCreds = [
-      'auth/invalid-credential',
-      'auth/user-not-found',
-      'auth/wrong-password',
-      'auth/invalid-email'
-    ];
-    if (badCreds.includes(err.code))
-      showToast('Email ama password-ku khaldan yahay', 'error');
-    else
-      showToast('Khalad: ' + err.message, 'error');
+    const badCreds = ['auth/invalid-credential','auth/user-not-found','auth/wrong-password','auth/invalid-email'];
+    if (badCreds.includes(err.code)) showToast('Email ama password-ku khaldan yahay', 'error');
+    else showToast('Khalad: ' + err.message, 'error');
   }
 }
 
@@ -369,17 +316,12 @@ async function handleGoogleSignIn() {
     const uid     = cred.user.uid;
     const userRef = doc(db, 'users', uid);
     const snap    = await getDoc(userRef);
-
     if (!snap.exists()) {
       await setDoc(userRef, {
-        uid,
-        fullName:      cred.user.displayName || '',
-        email:         cred.user.email       || '',
-        phone:         '',
-        role:          'user',
-        coinBalance:   0,
-        escrowBalance: 0,
-        createdAt:     serverTimestamp()
+        uid, fullName: cred.user.displayName || '',
+        email: cred.user.email || '', phone: '',
+        role: 'user', sosBalance: 0, escrowSOS: 0,
+        createdAt: serverTimestamp()
       });
     }
     window.location.replace('dashboard.html');
@@ -393,9 +335,7 @@ async function handleGoogleSignIn() {
 window.handlePasswordReset = async function() {
   const emailInput = document.getElementById('login_email');
   const email      = emailInput?.value.trim() || prompt('Email-kaaga geli:');
-  if (!email || !validateEmail(email)) {
-    showToast('Email sax ah geli', 'error'); return;
-  }
+  if (!email || !validateEmail(email)) { showToast('Email sax ah geli', 'error'); return; }
   if (!requireOnline()) return;
   try {
     await sendPasswordResetEmail(auth, email);
@@ -408,13 +348,21 @@ window.handlePasswordReset = async function() {
 // ── 14. LOGOUT ─────────────────────────────────────────────
 async function handleLogout() {
   try {
-    await signOut(auth);
+    // Clear all local state first
+    currentUser     = null;
+    currentUserData = null;
+    window._ematch_uid      = null;
+    window._ematch_userdata = null;
     localStorage.removeItem('ematch_user_cache');
-    window.location.replace('index.html');
+    // Then sign out from Firebase
+    await signOut(auth);
+    // Force hard navigation to login — no back-button return
+    window.location.href = 'index.html';
   } catch (err) {
     showToast('Khalad: ' + err.message, 'error');
   }
 }
+window.handleLogout = handleLogout;
 
 // ── 15. PASSWORD TOGGLE ────────────────────────────────────
 function initPasswordToggles() {
@@ -423,52 +371,30 @@ function initPasswordToggles() {
       const wrap  = btn.closest('.input-wrap');
       const input = wrap?.querySelector('input[type="password"], input[type="text"]');
       if (!input) return;
-      const hidden   = input.type === 'password';
-      input.type     = hidden ? 'text' : 'password';
-      btn.innerHTML  = hidden
-        ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8
-              a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4
-              c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07
-              a3 3 0 1 1-4.24-4.24"/>
-            <line x1="1" y1="1" x2="23" y2="23"/>
-           </svg>`
-        : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
-            viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-            <circle cx="12" cy="12" r="3"/>
-           </svg>`;
+      const hidden  = input.type === 'password';
+      input.type    = hidden ? 'text' : 'password';
+      btn.innerHTML = hidden
+        ? `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>`
+        : `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>`;
     });
   });
 }
 
 // ── 16. LOAD MATCHES LIST ──────────────────────────────────
-// Holds the active Firestore unsubscribe fn — prevents stacking listeners
 let _matchesUnsub = null;
 
 function loadMatches(container, filter = 'all') {
   if (!container) return;
-
-  // Unsubscribe previous listener before attaching a new one
   if (_matchesUnsub) { _matchesUnsub(); _matchesUnsub = null; }
-
   container.innerHTML = Array(3).fill(`
     <div class="card mb-md">
       <div class="skeleton sk-block mb-md"></div>
       <div class="skeleton sk-line" style="width:60%"></div>
       <div class="skeleton sk-line" style="width:80%"></div>
     </div>`).join('');
-
-  let q = filter === 'all'
+  const q = filter === 'all'
     ? query(collection(db, 'matches'), orderBy('createdAt','desc'), limit(25))
-    : query(
-        collection(db, 'matches'),
-        where('status', '==', filter),
-        orderBy('createdAt','desc'),
-        limit(25)
-      );
-
+    : query(collection(db, 'matches'), where('status','==',filter), orderBy('createdAt','desc'), limit(25));
   const unsub = onSnapshot(q, snap => {
     if (snap.empty) {
       container.innerHTML = `
@@ -479,19 +405,13 @@ function loadMatches(container, filter = 'all') {
         </div>`;
       return;
     }
-
-    container.innerHTML = snap.docs
-      .map(d => renderMatchCard(d.id, d.data()))
-      .join('');
-
+    container.innerHTML = snap.docs.map(d => renderMatchCard(d.id, d.data())).join('');
     container.querySelectorAll('.match-card').forEach(card => {
       card.addEventListener('click', () => openMatchModal(card.dataset.id));
     });
   }, err => {
-    container.innerHTML =
-      `<p class="text-center p-md text-muted">Khalad: ${err.message}</p>`;
+    container.innerHTML = `<p class="text-center p-md text-muted">Khalad: ${err.message}</p>`;
   });
-
   return unsub;
 }
 
@@ -503,10 +423,10 @@ function renderMatchCard(id, m) {
   };
   const emoji  = emojiMap[m.platform] || '🎮';
   const isLive = m.status === 'locked';
-
+  const fmt    = window.sosFormat || (n => n.toLocaleString());
   return `
     <div class="match-card" data-id="${id}" role="listitem" tabindex="0"
-      aria-label="${m.platform} match, stake: ${m.stakeCoins} coins">
+      aria-label="${m.platform} match, stake: ${m.stakeAmount} SOS">
       <div class="match-card-banner">
         <span>${emoji}</span>
         ${isLive ? '<div class="live-badge">LIVE</div>' : ''}
@@ -522,7 +442,7 @@ function renderMatchCard(id, m) {
         </div>
         <h3>${m.title || m.platform + ' Match'}</h3>
         <div class="match-footer">
-          <div class="stake-amount">🪙 ${(m.stakeCoins||0).toLocaleString()}</div>
+          <div class="stake-amount">${window.sosCoin?window.sosCoin(m.stakeAmount||0,18):''} ${fmt(m.stakeAmount||0)} SOS</div>
           <span class="players-joined">
             ${m.joinedBy ? '2/2 ▶ Socda' : '1/2 ⏳ Sugaysa'}
           </span>
@@ -536,62 +456,50 @@ async function openMatchModal(matchId) {
   openModal('match-modal');
   const content = document.getElementById('match-modal-content');
   if (!content) return;
-
   content.innerHTML = `
     <div class="modal-handle"></div>
     <div class="skeleton sk-block mb-md"></div>
     <div class="skeleton sk-line" style="width:70%"></div>
     <div class="skeleton sk-line" style="width:50%"></div>`;
-
   try {
     const snap = await getDoc(doc(db, 'matches', matchId));
     if (!snap.exists()) {
       content.innerHTML = '<p class="text-muted p-md">Match la ma helin</p>';
       return;
     }
-
-    const m       = snap.data();
-    const bal     = currentUserData?.coinBalance || 0;
-    const canJoin = m.status === 'open'
-                 && currentUser?.uid !== m.createdBy
-                 && !m.joinedBy
-                 && bal >= (m.stakeCoins || 0);
-    const noFunds = m.status === 'open'
-                 && currentUser?.uid !== m.createdBy
-                 && !m.joinedBy
-                 && bal < (m.stakeCoins || 0);
+    const m      = snap.data();
+    const bal    = currentUserData?.sosBalance || 0;
+    const fmt    = window.sosFormat || (n => n.toLocaleString());
+    const canJoin = m.status === 'open' && currentUser?.uid !== m.createdBy && !m.joinedBy && bal >= (m.stakeAmount||0);
+    const noFunds = m.status === 'open' && currentUser?.uid !== m.createdBy && !m.joinedBy && bal < (m.stakeAmount||0);
 
     content.innerHTML = `
       <div class="modal-handle"></div>
       <div class="modal-header">
         <h2>🎮 ${m.title || m.platform + ' Match'}</h2>
-        <button class="modal-close" onclick="closeModal('match-modal')"
-          aria-label="Xidh">✕</button>
+        <button class="modal-close" onclick="closeModal('match-modal')" aria-label="Xidh">✕</button>
       </div>
       <div class="match-meta mb-md">
         <span class="match-platform-tag">${m.platform}</span>
         <span class="status-pill ${m.status}">${
-          m.status === 'open'   ? 'Furan'      :
-          m.status === 'locked' ? '🔴 LIVE'    : 'Dhammaaday'
+          m.status === 'open'   ? 'Furan'   :
+          m.status === 'locked' ? '🔴 LIVE' : 'Dhammaaday'
         }</span>
       </div>
-
       <div class="grid-2 mb-md">
         <div class="card" style="text-align:center;padding:var(--sp-md)">
           <div style="font-size:22px;font-weight:900;color:var(--accent-green)">
-            🪙 ${(m.stakeCoins||0).toLocaleString()}
+            ${window.sosCoin?window.sosCoin(m.stakeAmount||0,18):''} ${fmt(m.stakeAmount||0)} SOS
           </div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Stake</div>
         </div>
         <div class="card" style="text-align:center;padding:var(--sp-md)">
           <div style="font-size:22px;font-weight:900;color:var(--accent-gold)">
-            🪙 ${((m.stakeCoins||0)*2).toLocaleString()}
+            ${window.sosCoin?window.sosCoin((m.stakeAmount||0)*2,18):''} ${fmt((m.stakeAmount||0)*2)} SOS
           </div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Prize</div>
         </div>
       </div>
-
-      <!-- Players -->
       <div class="card mb-md">
         <div class="flex items-center gap-md" style="justify-content:space-around">
           <div style="text-align:center">
@@ -601,9 +509,7 @@ async function openMatchModal(matchId) {
               font-size:18px;font-weight:900;color:#000;margin:0 auto 6px">
               ${(m.createdBy||'?')[0].toUpperCase()}
             </div>
-            <div style="font-size:11px;color:var(--text-muted)">
-              ${(m.createdBy||'').slice(0,8)}...
-            </div>
+            <div style="font-size:11px;color:var(--text-muted)">${(m.createdBy||'').slice(0,8)}...</div>
             ${m.winnerId===m.createdBy ? '<div style="color:var(--accent-gold)">🏆</div>' : ''}
           </div>
           <div style="font-size:18px;font-weight:900;color:var(--text-muted)">VS</div>
@@ -615,9 +521,7 @@ async function openMatchModal(matchId) {
                 font-size:18px;font-weight:900;color:#fff;margin:0 auto 6px">
                 ${m.joinedBy[0].toUpperCase()}
               </div>
-              <div style="font-size:11px;color:var(--text-muted)">
-                ${m.joinedBy.slice(0,8)}...
-              </div>
+              <div style="font-size:11px;color:var(--text-muted)">${m.joinedBy.slice(0,8)}...</div>
               ${m.winnerId===m.joinedBy ? '<div style="color:var(--accent-gold)">🏆</div>' : ''}
             ` : `
               <div style="width:48px;height:48px;border-radius:50%;
@@ -629,32 +533,28 @@ async function openMatchModal(matchId) {
           </div>
         </div>
       </div>
-
       ${canJoin ? `
         <div class="form-group mt-sm">
           <label style="font-size:12px;font-weight:700;color:var(--text-muted)">
             Game-ka Magacaaga (In-Game Username)
           </label>
           <div class="input-wrap">
-            <input type="text" id="join_username"
-              placeholder="Tusaale: PlayerXX123"
+            <input type="text" id="join_username" placeholder="Tusaale: PlayerXX123"
               style="font-size:14px" autocomplete="off">
           </div>
         </div>
         <button class="btn btn-primary mt-sm" id="btn_join_match"
-          data-id="${matchId}" data-stake="${m.stakeCoins}">
-          <span class="btn-text">🎮 Ku Biir — 🪙 ${(m.stakeCoins||0).toLocaleString()}</span>
+          data-id="${matchId}" data-stake="${m.stakeAmount}">
+          <span class="btn-text">🎮 Ku Biir — ${window.sosCoin?window.sosCoin(m.stakeAmount||0,18):''} ${fmt(m.stakeAmount||0)} SOS</span>
           <div class="btn-spinner"></div>
         </button>` : ''}
-
       ${m.status==='locked' && (currentUser?.uid===m.createdBy || currentUser?.uid===m.joinedBy) ? `
         <div class="card mt-sm" style="background:rgba(0,230,118,.04);border-color:rgba(0,230,118,.15)">
           <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:8px">
             📸 Natiijooyinka Dir — AI ayaa go'aan qaadanayaa
           </div>
           <label class="btn btn-ghost" style="cursor:pointer;width:100%;justify-content:center">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16"
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
               <circle cx="12" cy="13" r="4"/>
             </svg>
@@ -666,23 +566,16 @@ async function openMatchModal(matchId) {
             AI screenshot-ka akhrin doona oo winner automatic go'aamin doona
           </div>
         </div>` : ''}
-
       ${m.status==='open' && currentUser?.uid===m.createdBy ? `
-        <div class="card mt-sm" style="background:rgba(0,230,118,.05);
-          border-color:rgba(0,230,118,.2);text-align:center">
-          <p style="font-size:13px;color:var(--accent-green)">
-            ✅ Adaa abuuray — qof kale ayaa la sugayaa
-          </p>
+        <div class="card mt-sm" style="background:rgba(0,230,118,.05);border-color:rgba(0,230,118,.2);text-align:center">
+          <p style="font-size:13px;color:var(--accent-green)">✅ Adaa abuuray — qof kale ayaa la sugayaa</p>
         </div>` : ''}
-
       ${noFunds ? `
-        <div class="card mt-sm"
-          style="border-color:rgba(239,68,68,.3);text-align:center">
+        <div class="card mt-sm" style="border-color:rgba(239,68,68,.3);text-align:center">
           <p class="text-red" style="font-size:13px;margin-bottom:8px">
             💸 Lacag kuma filna. Wallet-kaaga ku shub.
           </p>
-          <a href="wallet.html" class="btn btn-gold btn-sm"
-            style="text-decoration:none;width:auto;margin:0 auto">
+          <a href="wallet.html" class="btn btn-gold btn-sm" style="text-decoration:none;width:auto;margin:0 auto">
             + Deposit
           </a>
         </div>` : ''}`;
@@ -696,60 +589,40 @@ async function openMatchModal(matchId) {
       });
     }
   } catch (err) {
-    content.innerHTML =
-      `<p class="text-muted p-md">Khalad: ${err.message}</p>`;
+    content.innerHTML = `<p class="text-muted p-md">Khalad: ${err.message}</p>`;
   }
 }
 
-// ── 19. JOIN MATCH (Firestore Transaction) ─────────────────
-async function joinMatch(matchId, stakeCoins, inGameUsername) {
+// ── 19. JOIN MATCH ─────────────────────────────────────────
+async function joinMatch(matchId, stakeAmount, inGameUsername) {
   if (!requireOnline() || !currentUser) return;
-
-  const btn = document.getElementById('btn_join_match')
-           || document.getElementById('btn_join_from_matches');
+  const btn = document.getElementById('btn_join_match') || document.getElementById('btn_join_from_matches');
   if (btn) setLoading(btn, true);
-
   try {
     await runTransaction(db, async tx => {
-      const matchRef  = doc(db, 'matches', matchId);
-      const userRef   = doc(db, 'users',   currentUser.uid);
-      const [mSnap, uSnap] = await Promise.all([
-        tx.get(matchRef), tx.get(userRef)
-      ]);
-
+      const matchRef = doc(db, 'matches', matchId);
+      const userRef  = doc(db, 'users',   currentUser.uid);
+      const [mSnap, uSnap] = await Promise.all([tx.get(matchRef), tx.get(userRef)]);
       if (!mSnap.exists()) throw new Error('Match la ma helin');
-
       const match = mSnap.data();
       const user  = uSnap.data();
-
-      if (match.status !== 'open')            throw new Error('Match-ku xidhmay — qof kale ayaa ku biiri jiray');
+      if (match.status !== 'open')            throw new Error('Match-ku xidhmay');
       if (match.joinedBy)                      throw new Error('Match-ku buuxay');
       if (match.createdBy === currentUser.uid) throw new Error('Adigu abuuray match-kan');
-      if ((user.coinBalance||0) < stakeCoins)  throw new Error('Lacag kuma filna');
-
+      if ((user.sosBalance||0) < stakeAmount)  throw new Error('Lacag kuma filna');
       tx.update(matchRef, {
-        joinedBy:         currentUser.uid,
-        joinedByUsername: inGameUsername || '',
-        status:           'locked',
-        lockedAt:         serverTimestamp()
+        joinedBy: currentUser.uid, joinedByUsername: inGameUsername || '',
+        status: 'locked', lockedAt: serverTimestamp()
       });
-
       tx.update(userRef, {
-        coinBalance:   (user.coinBalance   || 0) - stakeCoins,
-        escrowBalance: (user.escrowBalance || 0) + stakeCoins
+        sosBalance: (user.sosBalance||0) - stakeAmount,
+        escrowSOS:  (user.escrowSOS||0)  + stakeAmount
       });
-
-      const txRef = doc(collection(db, 'transactions'));
-      tx.set(txRef, {
-        userId:       currentUser.uid,
-        type:         'escrow_lock',
-        coins:        -stakeCoins,
-        relatedMatch: matchId,
-        createdAt:    serverTimestamp(),
-        meta:         { action: 'join', matchId }
+      tx.set(doc(collection(db, 'transactions')), {
+        userId: currentUser.uid, type: 'escrow_lock', sos: -stakeAmount,
+        relatedMatch: matchId, createdAt: serverTimestamp(), meta: { action: 'join', matchId }
       });
     });
-
     await loadUserData(currentUser.uid);
     closeModal('match-modal');
     showToast('✅ Match ku biirtay! Ciyaar fiican 🎮', 'success');
@@ -758,90 +631,56 @@ async function joinMatch(matchId, stakeCoins, inGameUsername) {
     showToast(err.message, 'error');
   }
 }
-
-// Expose for matches.html
 window.joinMatchGlobal = joinMatch;
 
-// ── 20. CREATE MATCH (Firestore Transaction) ───────────────
+// ── 20. CREATE MATCH ───────────────────────────────────────
 async function handleCreateMatch(e) {
   e.preventDefault();
   if (!requireOnline() || !currentUser) return;
-
-  const platform   = document.getElementById('cm_platform')?.value;
-  const stakeCoins = parseInt(document.getElementById('cm_stake')?.value) || 0;
-  const title      = document.getElementById('cm_title')?.value.trim() || '';
-  const username   = document.getElementById('cm_username')?.value.trim() || '';
-  const btn        = document.getElementById('btn_create_match');
-
+  const platform    = document.getElementById('cm_platform')?.value;
+  const stakeAmount = parseInt(document.getElementById('cm_stake')?.value) || 0;
+  const title       = document.getElementById('cm_title')?.value.trim()    || '';
+  const username    = document.getElementById('cm_username')?.value.trim() || '';
+  const btn         = document.getElementById('btn_create_match');
   clearErrors('create-match-form');
   let valid = true;
-  if (!platform)
-    { showError('cm_platform', 'Platform dooro'); valid = false; }
-  if (!username)
-    { showError('cm_username', 'Game-ka magacaaga geli'); valid = false; }
-  if (stakeCoins < 10)
-    { showError('cm_stake', 'Ugu yaraan 10 coin'); valid = false; }
-  if ((currentUserData?.coinBalance || 0) < stakeCoins)
-    { showError('cm_stake', 'Lacag kuma filna'); valid = false; }
+  if (!platform)        { showError('cm_platform', 'Platform dooro'); valid = false; }
+  if (!username)        { showError('cm_username', 'Game-ka magacaaga geli'); valid = false; }
+  if (stakeAmount < 8000) { showError('cm_stake', 'Ugu yaraan 8 kun SOS (≈ $0.25)'); valid = false; }
+  if ((currentUserData?.sosBalance||0) < stakeAmount) { showError('cm_stake', 'Lacag kuma filna'); valid = false; }
   if (!valid) return;
-
   setLoading(btn, true);
   try {
     await runTransaction(db, async tx => {
       const userRef  = doc(db, 'users', currentUser.uid);
       const userSnap = await tx.get(userRef);
       const user     = userSnap.data();
-
-      if ((user.coinBalance || 0) < stakeCoins) throw new Error('Lacag kuma filna');
-
+      if ((user.sosBalance||0) < stakeAmount) throw new Error('Lacag kuma filna');
       const matchRef = doc(collection(db, 'matches'));
       const matchId  = matchRef.id;
-
       tx.set(matchRef, {
-        id:                 matchId,
-        title:              title || platform + ' Match',
-        platform,
-        stakeCoins,
-        createdBy:          currentUser.uid,
-        createdByUsername:  username,
-        joinedBy:           null,
-        joinedByUsername:   null,
-        status:             'open',
-        winnerId:           null,
-        result: {
-          createdBy_claim:  null,
-          joinedBy_claim:   null,
-          dispute:          false,
-          screenshotBy:     null
-        },
-        createdAt:   serverTimestamp(),
-        completedAt: null,
-        lockedAt:    null
+        id: matchId, title: title || platform + ' Match', platform, stakeAmount,
+        createdBy: currentUser.uid, createdByUsername: username,
+        joinedBy: null, joinedByUsername: null, status: 'open', winnerId: null,
+        result: { createdBy_claim: null, joinedBy_claim: null, dispute: false, screenshotBy: null },
+        createdAt: serverTimestamp(), completedAt: null, lockedAt: null
       });
-
       tx.update(userRef, {
-        coinBalance:   (user.coinBalance   || 0) - stakeCoins,
-        escrowBalance: (user.escrowBalance || 0) + stakeCoins
+        sosBalance: (user.sosBalance||0) - stakeAmount,
+        escrowSOS:  (user.escrowSOS||0)  + stakeAmount
       });
-
-      const txRef = doc(collection(db, 'transactions'));
-      tx.set(txRef, {
-        userId:       currentUser.uid,
-        type:         'escrow_lock',
-        coins:        -stakeCoins,
-        relatedMatch: matchId,
-        createdAt:    serverTimestamp(),
-        meta:         { action: 'create', matchId }
+      tx.set(doc(collection(db, 'transactions')), {
+        userId: currentUser.uid, type: 'escrow_lock', sos: -stakeAmount,
+        relatedMatch: matchId, createdAt: serverTimestamp(), meta: { action: 'create', matchId }
       });
     });
-
     await loadUserData(currentUser.uid);
     closeModal('create-match-modal');
     showToast('✅ Match la abuuray! 🎮', 'success');
-    if (document.getElementById('cm_platform')) document.getElementById('cm_platform').value = '';
-    if (document.getElementById('cm_stake'))    document.getElementById('cm_stake').value    = '';
-    if (document.getElementById('cm_title'))    document.getElementById('cm_title').value    = '';
-    if (document.getElementById('cm_username')) document.getElementById('cm_username').value = '';
+    ['cm_platform','cm_stake','cm_title','cm_username'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
   } catch (err) {
     setLoading(btn, false);
     showToast(err.message, 'error');
@@ -849,10 +688,9 @@ async function handleCreateMatch(e) {
 }
 
 // ── 21. AI SCREENSHOT ANALYSIS ────────────────────────────
-
 async function setMatchWinner(matchId, winnerUid, m) {
   const loserUid = winnerUid === m.createdBy ? m.joinedBy : m.createdBy;
-  const prize    = (m.stakeCoins || 0) * 2;
+  const prize    = (m.stakeAmount||0) * 2;
   await runTransaction(db, async tx => {
     const mRef = doc(db, 'matches', matchId);
     const wRef = doc(db, 'users', winnerUid);
@@ -860,137 +698,109 @@ async function setMatchWinner(matchId, winnerUid, m) {
     const [wSnap, lSnap] = await Promise.all([tx.get(wRef), tx.get(lRef)]);
     tx.update(mRef, { winnerId: winnerUid, status: 'done', completedAt: serverTimestamp() });
     tx.update(wRef, {
-      coinBalance:   (wSnap.data().coinBalance   || 0) + prize,
-      escrowBalance: Math.max(0, (wSnap.data().escrowBalance || 0) - m.stakeCoins)
+      sosBalance: (wSnap.data().sosBalance||0) + prize,
+      escrowSOS:  Math.max(0, (wSnap.data().escrowSOS||0) - m.stakeAmount)
     });
-    tx.update(lRef, {
-      escrowBalance: Math.max(0, (lSnap.data().escrowBalance || 0) - m.stakeCoins)
-    });
-    const t1 = doc(collection(db, 'transactions'));
-    tx.set(t1, { userId: winnerUid, type: 'match_win',  coins: +prize,       relatedMatch: matchId, createdAt: serverTimestamp(), meta: { matchId, loserUid } });
-    const t2 = doc(collection(db, 'transactions'));
-    tx.set(t2, { userId: loserUid,  type: 'match_loss', coins: -m.stakeCoins, relatedMatch: matchId, createdAt: serverTimestamp(), meta: { matchId, winnerUid } });
+    tx.update(lRef, { escrowSOS: Math.max(0, (lSnap.data().escrowSOS||0) - m.stakeAmount) });
+    tx.set(doc(collection(db, 'transactions')), { userId: winnerUid, type: 'match_win',  sos: +prize,         relatedMatch: matchId, createdAt: serverTimestamp(), meta: { matchId, loserUid } });
+    tx.set(doc(collection(db, 'transactions')), { userId: loserUid,  type: 'match_loss', sos: -m.stakeAmount, relatedMatch: matchId, createdAt: serverTimestamp(), meta: { matchId, winnerUid } });
   });
 }
 
 window.analyzeScreenshot = async function(matchId, file, myUid) {
-  if (!file) return;
-  if (!requireOnline()) return;
-
+  if (!file || !requireOnline()) return;
   showToast('📸 AI screenshot-ka falanqaynaya...', 'info');
-
   try {
-    // 1. File → base64
     const base64 = await new Promise((res, rej) => {
       const reader = new FileReader();
       reader.onload  = () => res(reader.result.split(',')[1]);
       reader.onerror = () => rej(new Error('File akhrinta ku guuldareysatay'));
       reader.readAsDataURL(file);
     });
-
-    // 2. Match xogta soo qaado
     const mSnap = await getDoc(doc(db, 'matches', matchId));
     if (!mSnap.exists()) { showToast('Match la ma helin', 'error'); return; }
-    const m         = mSnap.data();
-    const isCreator = myUid === m.createdBy;
-    const myUsername  = isCreator ? (m.createdByUsername || 'Player 1') : (m.joinedByUsername  || 'Player 2');
-    const oppUsername = isCreator ? (m.joinedByUsername  || 'Player 2') : (m.createdByUsername || 'Player 1');
+    const m          = mSnap.data();
+    const isCreator  = myUid === m.createdBy;
+    const myUsername  = isCreator ? (m.createdByUsername||'Player 1') : (m.joinedByUsername||'Player 2');
+    const oppUsername = isCreator ? (m.joinedByUsername||'Player 2')  : (m.createdByUsername||'Player 1');
     const oppUid      = isCreator ? m.joinedBy : m.createdBy;
-
     if (m.status !== 'locked') { showToast('Match live ma ahan', 'error'); return; }
     if (m.winnerId)             { showToast('Winner horey la dejiyay', 'error'); return; }
-
-    // 3. Claude AI u dir
-const response = await fetch('/.netlify/functions/analyze-screenshot', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ base64, mediaType: file.type, myUsername, oppUsername })
-});
-
-const result = await response.json();
-
-    // 4. Natiijooyinka xukum
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514', max_tokens: 300,
+        messages: [{ role: 'user', content: [
+          { type: 'image', source: { type: 'base64', media_type: file.type, data: base64 } },
+          { type: 'text', text: `This is a game result screenshot from a 1v1 match.\nPlayer 1: "${myUsername}"\nPlayer 2: "${oppUsername}"\nReply ONLY with JSON: {"winner":"player1","score_p1":0,"score_p2":0,"confidence":"high"}\nwinner: "player1" if ${myUsername} won, "player2" if ${oppUsername} won, "unclear" if cannot determine\nconfidence: "high" if clearly visible, "low" if unclear` }
+        ]}]
+      })
+    });
+    const data   = await response.json();
+    const raw    = data.content?.[0]?.text || '{}';
+    const result = JSON.parse(raw.replace(/```json|```/g, '').trim());
     if (result.confidence === 'high' && result.winner !== 'unclear') {
       const winnerUid = result.winner === 'player1' ? myUid : oppUid;
       await setMatchWinner(matchId, winnerUid, m);
       const isIWon = winnerUid === myUid;
-      showToast(isIWon ? '🏆 Adaa guuleystay! Coins la siiyay!' : '💸 Waan khasaaray. Ciyaarta xiga!', isIWon ? 'success' : 'error');
+      showToast(isIWon ? '🏆 Adaa guuleystay! SOS la siiyay!' : '💸 Waan khasaaray. Ciyaarta xiga!', isIWon ? 'success' : 'error');
       closeModal('match-modal');
       await loadUserData(currentUser.uid);
     } else {
-      // Low confidence → dispute → admin
       await updateDoc(doc(db, 'matches', matchId), {
-        status:            'dispute',
-        'result.dispute':  true,
-        'result.screenshotBy': myUid,
-        'result.aiResult': result
+        status: 'dispute', 'result.dispute': true,
+        'result.screenshotBy': myUid, 'result.aiResult': result
       });
       await setDoc(doc(collection(db, 'disputes')), {
-        matchId,
-        submittedBy: myUid,
-        aiResult:    result,
-        createdAt:   serverTimestamp()
+        matchId, submittedBy: myUid, aiResult: result, createdAt: serverTimestamp()
       });
-      showToast('⚠️ Screenshot-ka cad ma ahayn — Admin ayaa go\'aan qaadanaya', 'warning');
+      showToast("⚠️ Screenshot-ka cad ma ahayn — Admin ayaa go'aan qaadanaya", 'warning');
       closeModal('match-modal');
     }
-
   } catch (err) {
     console.error('analyzeScreenshot:', err);
     showToast('Screenshot-ka falanqaynta ku guuldareysatay: ' + err.message, 'error');
   }
 };
 
-// ── 22. DEPOSIT REQUEST ────────────────────────────────────
+// ── 22a. DEPOSIT REQUEST ───────────────────────────────────
 async function handleDeposit(e) {
   e.preventDefault();
   if (!requireOnline() || !currentUser) return;
-
   const amount   = parseFloat(document.getElementById('dep_amount')?.value)   || 0;
   const phone    = document.getElementById('dep_phone')?.value.trim()         || '';
   const provider = document.getElementById('dep_provider')?.value             || '';
   const btn      = document.getElementById('btn_deposit');
-
   clearErrors('deposit-form');
   let valid = true;
-  if (amount < 1 || amount > 1000)  { showError('dep_amount',   'Qadarka $1–$1000'); valid = false; }
-  if (!validatePhone(phone))         { showError('dep_phone',    'Lambarka sax geli'); valid = false; }
-  if (!provider)                     { showError('dep_provider', 'Provider dooro');    valid = false; }
+  if (amount < 1 || amount > 1000) { showError('dep_amount',   'Qadarka $1–$1000'); valid = false; }
+  if (!validatePhone(phone))        { showError('dep_phone',    'Lambarka sax geli'); valid = false; }
+  if (!provider)                    { showError('dep_provider', 'Provider dooro');    valid = false; }
   if (!valid) return;
-
-  const coinsAmount = Math.floor(amount / 0.10);
-  const cleanPhone  = phone.replace('+', '').replace(/\s/g, '');
-  const amtMillis   = Math.round(amount * 1000);
-
-  const ussdMap = {
+  const sosAmount  = Math.floor(amount * (window._sosRate||32000));
+  const cleanPhone = phone.replace('+','').replace(/\s/g,'');
+  const amtMillis  = Math.round(amount * 1000);
+  const ussdMap    = {
     Hormuud: `*712*${cleanPhone}*${amtMillis}#`,
     Somnet:  `*888*1*${cleanPhone}*${amtMillis}#`,
     Somtel:  `*668*${cleanPhone}*${amtMillis}#`
   };
   const ussdCode = ussdMap[provider] || `*000*${cleanPhone}*${amtMillis}#`;
-
   setLoading(btn, true);
   try {
     await addDoc(collection(db, 'deposit_requests'), {
-      userId:        currentUser.uid,
-      amountUSD:     amount,
-      coinsAmount,
-      phoneSentFrom: phone,
-      company:       provider,
-      ussdCode,
-      status:        'pending',
-      createdAt:     serverTimestamp(),
-      reviewedBy:    null,
-      reviewedAt:    null
+      userId: currentUser.uid, amountUSD: amount, sosAmount,
+      phoneSentFrom: phone, company: provider, ussdCode,
+      status: 'pending', createdAt: serverTimestamp(),
+      reviewedBy: null, reviewedAt: null
     });
-
     setLoading(btn, false);
-
+    const fmt = window.sosFormat || (n => n.toLocaleString());
     const ussdEl     = document.getElementById('ussd-code-display');
     const ussdAmount = document.getElementById('ussd-amount-display');
     if (ussdEl)     ussdEl.textContent     = ussdCode;
-    if (ussdAmount) ussdAmount.textContent = `$${amount} → 🪙 ${coinsAmount.toLocaleString()} coins`;
-
+    if (ussdAmount) ussdAmount.textContent = `$${amount} → ${fmt(sosAmount)} SOS`;
     closeModal('deposit-modal');
     setTimeout(() => openModal('ussd-modal'), 200);
   } catch (err) {
@@ -999,61 +809,38 @@ async function handleDeposit(e) {
   }
 }
 
-// ── 22. SEND COINS (Firestore Transaction) ─────────────────
+// ── 22b. SEND SOS ──────────────────────────────────────────
 async function handleSendCoins(e) {
   e.preventDefault();
   if (!requireOnline() || !currentUser) return;
-
   const recipientId = document.getElementById('send_recipient')?.value.trim() || '';
   const sendAmount  = parseInt(document.getElementById('send_amount')?.value)  || 0;
   const btn         = document.getElementById('btn_send_coins');
-
   clearErrors('send-coins-form');
   let valid = true;
-  if (!recipientId)
-    { showError('send_recipient', 'UID-ka geli'); valid = false; }
-  if (recipientId === currentUser.uid)
-    { showError('send_recipient', 'Adiga nafta kuu diri kartid'); valid = false; }
-  if (sendAmount < 1)
-    { showError('send_amount', 'Tiro sax ah geli'); valid = false; }
-  if (sendAmount > (currentUserData?.coinBalance || 0))
-    { showError('send_amount', 'Lacag kuma filna'); valid = false; }
+  if (!recipientId)                                      { showError('send_recipient', 'UID-ka geli'); valid = false; }
+  if (recipientId === currentUser.uid)                   { showError('send_recipient', 'Adiga nafta kuu diri kartid'); valid = false; }
+  if (sendAmount < 1)                                    { showError('send_amount', 'Tiro sax ah geli'); valid = false; }
+  if (sendAmount > (currentUserData?.sosBalance||0))     { showError('send_amount', 'Lacag kuma filna'); valid = false; }
   if (!valid) return;
-
   setLoading(btn, true);
   try {
     await runTransaction(db, async tx => {
       const senderRef    = doc(db, 'users', currentUser.uid);
       const recipientRef = doc(db, 'users', recipientId);
-      const [sSnap, rSnap] = await Promise.all([
-        tx.get(senderRef), tx.get(recipientRef)
-      ]);
-
+      const [sSnap, rSnap] = await Promise.all([tx.get(senderRef), tx.get(recipientRef)]);
       if (!rSnap.exists()) throw new Error('Isticmaalaha la ma helin');
       const sender = sSnap.data();
-      if ((sender.coinBalance || 0) < sendAmount) throw new Error('Lacag kuma filna');
-
-      tx.update(senderRef,    { coinBalance: (sender.coinBalance||0) - sendAmount });
-      tx.update(recipientRef, { coinBalance: (rSnap.data().coinBalance||0) + sendAmount });
-
-      const t1 = doc(collection(db, 'transactions'));
-      tx.set(t1, {
-        userId: currentUser.uid, type:'send',
-        coins: -sendAmount, relatedMatch: null,
-        createdAt: serverTimestamp(), meta: { to: recipientId }
-      });
-
-      const t2 = doc(collection(db, 'transactions'));
-      tx.set(t2, {
-        userId: recipientId, type:'receive',
-        coins: +sendAmount, relatedMatch: null,
-        createdAt: serverTimestamp(), meta: { from: currentUser.uid }
-      });
+      if ((sender.sosBalance||0) < sendAmount) throw new Error('Lacag kuma filna');
+      tx.update(senderRef,    { sosBalance: (sender.sosBalance||0) - sendAmount });
+      tx.update(recipientRef, { sosBalance: (rSnap.data().sosBalance||0) + sendAmount });
+      tx.set(doc(collection(db,'transactions')), { userId: currentUser.uid, type:'send',    sos: -sendAmount, relatedMatch: null, createdAt: serverTimestamp(), meta: { to: recipientId } });
+      tx.set(doc(collection(db,'transactions')), { userId: recipientId,     type:'receive', sos: +sendAmount, relatedMatch: null, createdAt: serverTimestamp(), meta: { from: currentUser.uid } });
     });
-
     await loadUserData(currentUser.uid);
     closeModal('send-modal');
-    showToast(`✅ 🪙 ${sendAmount.toLocaleString()} la diray!`, 'success');
+    const fmt = window.sosFormat || (n => n.toLocaleString());
+    showToast(`✅ ${fmt(sendAmount)} SOS la diray!`, 'success');
     document.getElementById('send_recipient').value = '';
     document.getElementById('send_amount').value    = '';
   } catch (err) {
@@ -1065,7 +852,6 @@ async function handleSendCoins(e) {
 // ── 23. TRANSACTION HISTORY ────────────────────────────────
 function loadTransactionHistory(container) {
   if (!container || !currentUser) return;
-
   container.innerHTML = Array(4).fill(`
     <div class="tx-item">
       <div class="skeleton" style="width:40px;height:40px;border-radius:8px;flex-shrink:0"></div>
@@ -1074,57 +860,23 @@ function loadTransactionHistory(container) {
         <div class="skeleton sk-line" style="width:40%"></div>
       </div>
     </div>`).join('');
-
   const q = query(
     collection(db, 'transactions'),
-    where('userId', '==', currentUser.uid),
-    orderBy('createdAt', 'desc'),
-    limit(30)
+    where('userId','==', currentUser.uid),
+    orderBy('createdAt','desc'), limit(30)
   );
-
   onSnapshot(q, snap => {
     if (snap.empty) {
-      container.innerHTML = `
-        <p class="text-center text-muted p-md">
-          Wax transaction ah ma jiro weli
-        </p>`;
+      container.innerHTML = `<p class="text-center text-muted p-md">Wax transaction ah ma jiro weli</p>`;
       return;
     }
-
-    const icons  = {
-      deposit:          '💰',
-      deposit:          '💰',
-      deposit:          '💰',
-      deposit_approved: '💰',
-      escrow_lock:      '🔒',
-      escrow_release:   '🔓',
-      match_win:        '🏆',
-      win:              '🏆',
-      match_loss:       '💸',
-      send:             '📤',
-      receive:          '📥',
-      refund:           '↩️'
-    };
-    const labels = {
-      deposit:          'Lacag la keenay',
-      deposit:          'Lacag la keenay',
-      deposit:          'Lacag la keenay',
-      deposit_approved: 'Lacag la keenay',
-      escrow_lock:      'Match escrow',
-      escrow_release:   'Escrow la furay',
-      match_win:        'Guul Match',
-      win:              'Guul Match',
-      match_loss:       'Khasaaro Match',
-      send:             'La diray',
-      receive:          'La helay',
-      refund:           'Dib loo celiyay'
-    };
-
+    const icons  = { deposit_approved:'💰', escrow_lock:'🔒', escrow_release:'🔓', match_win:'🏆', win:'🏆', match_loss:'💸', send:'📤', receive:'📥', refund:'↩️' };
+    const labels = { deposit_approved:'Lacag la keenay', escrow_lock:'Match escrow', escrow_release:'Escrow la furay', match_win:'Guul Match', win:'Guul Match', match_loss:'Khasaaro Match', send:'La diray', receive:'La helay', refund:'Dib loo celiyay' };
+    const fmt = window.sosFormat || (n => n.toLocaleString());
     container.innerHTML = snap.docs.map(d => {
       const t        = d.data();
-      const isCredit = t.coins > 0;
-      const time     = t.createdAt?.toDate
-        ? t.createdAt.toDate().toLocaleDateString('so-SO') : 'Dhawaan';
+      const isCredit = t.sos > 0;
+      const time     = t.createdAt?.toDate ? t.createdAt.toDate().toLocaleDateString('so-SO') : 'Dhawaan';
       return `
         <div class="tx-item" role="listitem">
           <div class="tx-icon">${icons[t.type] || '💫'}</div>
@@ -1133,7 +885,7 @@ function loadTransactionHistory(container) {
             <div class="tx-date">${time}</div>
           </div>
           <div class="tx-amount ${isCredit ? 'credit' : 'debit'}">
-            ${isCredit ? '+' : ''}${(t.coins||0).toLocaleString()} 🪙
+            ${isCredit ? '+' : ''}${fmt(t.sos||0)} SOS
           </div>
         </div>`;
     }).join('');
@@ -1145,26 +897,16 @@ function loadDepositRequests(container) {
   if (!container) return;
   const adminRoles = ['administrator','owner','partner_manager'];
   if (!adminRoles.includes(currentUserData?.role)) return;
-
-  const q = query(
-    collection(db, 'deposit_requests'),
-    where('status','==','pending'),
-    orderBy('createdAt','desc'),
-    limit(20)
-  );
-
+  const q = query(collection(db,'deposit_requests'), where('status','==','pending'), orderBy('createdAt','desc'), limit(20));
   onSnapshot(q, snap => {
-    if (snap.empty) {
-      container.innerHTML =
-        `<p class="text-muted" style="font-size:13px">✅ Pending requests ma jiro</p>`;
-      return;
-    }
+    const fmt = window.sosFormat || (n => n.toLocaleString());
+    if (snap.empty) { container.innerHTML = `<p class="text-muted" style="font-size:13px">✅ Pending requests ma jiro</p>`; return; }
     container.innerHTML = snap.docs.map(d => {
       const r = d.data();
       return `
         <div class="deposit-req-card">
           <div class="deposit-req-meta">
-            <span class="deposit-req-coins">🪙 ${(r.coinsAmount||0).toLocaleString()}</span>
+            <span class="deposit-req-coins">${fmt(r.sosAmount||0)} SOS</span>
             <span class="pending-badge">Sugaysa</span>
           </div>
           <div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px">
@@ -1174,14 +916,8 @@ function loadDepositRequests(container) {
             ${r.ussdCode}
           </div>
           <div class="grid-2">
-            <button class="btn btn-primary btn-sm"
-              onclick="adminApproveDeposit('${d.id}','${r.userId}',${r.coinsAmount})">
-              ✅ Ogolow
-            </button>
-            <button class="btn btn-danger btn-sm"
-              onclick="adminRejectDeposit('${d.id}')">
-              ❌ Diid
-            </button>
+            <button class="btn btn-primary btn-sm" onclick="adminApproveDeposit('${d.id}','${r.userId}',${r.sosAmount})">✅ Ogolow</button>
+            <button class="btn btn-danger btn-sm"  onclick="adminRejectDeposit('${d.id}')">❌ Diid</button>
           </div>
         </div>`;
     }).join('');
@@ -1189,46 +925,23 @@ function loadDepositRequests(container) {
 }
 
 // ── 25. ADMIN: APPROVE DEPOSIT ─────────────────────────────
-window.adminApproveDeposit = async function(reqId, userId, coinsAmount) {
-  if (!confirm(
-    `✅ Deposit ogolaan?\n🪙 ${coinsAmount.toLocaleString()} coins\n$${(coinsAmount*0.1).toFixed(2)}`
-  )) return;
+window.adminApproveDeposit = async function(reqId, userId, sosAmount) {
+  const fmt = window.sosFormat || (n => n.toLocaleString());
+  if (!confirm(`✅ Deposit ogolaan?\n${fmt(sosAmount)} SOS\n$${(sosAmount/32000).toFixed(2)}`)) return;
   if (!requireOnline()) return;
-
   try {
     await runTransaction(db, async tx => {
-      const reqRef   = doc(db, 'deposit_requests', reqId);
-      const userRef  = doc(db, 'users', userId);
+      const reqRef  = doc(db,'deposit_requests', reqId);
+      const userRef = doc(db,'users', userId);
       const [rSnap, uSnap] = await Promise.all([tx.get(reqRef), tx.get(userRef)]);
-
       if (!rSnap.exists())                   throw new Error('Request la ma helin');
       if (rSnap.data().status !== 'pending') throw new Error('Horey loo xukumay');
-
-      tx.update(reqRef, {
-        status:     'approved',
-        reviewedBy: currentUser.uid,
-        reviewedAt: serverTimestamp()
-      });
-
-      tx.update(userRef, {
-        coinBalance: (uSnap.data().coinBalance || 0) + coinsAmount
-      });
-
-      const txRef = doc(collection(db, 'transactions'));
-      tx.set(txRef, {
-        userId, type:'deposit_approved', coins: coinsAmount,
-        relatedMatch: null, createdAt: serverTimestamp(),
-        meta: { reqId, approvedBy: currentUser.uid }
-      });
-
-      const logRef = doc(collection(db, 'adminLogs'));
-      tx.set(logRef, {
-        action:'approve_deposit', adminUid: currentUser.uid,
-        targetUserId: userId, reqId, coinsAmount,
-        createdAt: serverTimestamp()
-      });
+      tx.update(reqRef,  { status:'approved', reviewedBy: currentUser.uid, reviewedAt: serverTimestamp() });
+      tx.update(userRef, { sosBalance: (uSnap.data().sosBalance||0) + sosAmount });
+      tx.set(doc(collection(db,'transactions')), { userId, type:'deposit_approved', sos: sosAmount, relatedMatch: null, createdAt: serverTimestamp(), meta: { reqId, approvedBy: currentUser.uid } });
+      tx.set(doc(collection(db,'adminLogs')),    { action:'approve_deposit', adminUid: currentUser.uid, targetUserId: userId, reqId, sosAmount, createdAt: serverTimestamp() });
     });
-    showToast('✅ Deposit la ogolaaday! Coins waa la gudbiyay.', 'success');
+    showToast('✅ Deposit la ogolaaday! SOS waa la gudbiyay.', 'success');
   } catch (err) {
     showToast('Khalad: ' + err.message, 'error');
   }
@@ -1238,17 +951,8 @@ window.adminRejectDeposit = async function(reqId) {
   if (!confirm('❌ Deposit-kan diidid?')) return;
   if (!requireOnline()) return;
   try {
-    await updateDoc(doc(db, 'deposit_requests', reqId), {
-      status:     'rejected',
-      reviewedBy: currentUser.uid,
-      reviewedAt: serverTimestamp()
-    });
-
-    const logRef = doc(collection(db, 'adminLogs'));
-    await addDoc(collection(db, 'adminLogs'), {
-      action:'reject_deposit', adminUid: currentUser.uid,
-      reqId, createdAt: serverTimestamp()
-    });
+    await updateDoc(doc(db,'deposit_requests', reqId), { status:'rejected', reviewedBy: currentUser.uid, reviewedAt: serverTimestamp() });
+    await addDoc(collection(db,'adminLogs'), { action:'reject_deposit', adminUid: currentUser.uid, reqId, createdAt: serverTimestamp() });
     showToast('Deposit la diidiy', 'info');
   } catch (err) {
     showToast('Khalad: ' + err.message, 'error');
@@ -1257,81 +961,40 @@ window.adminRejectDeposit = async function(reqId) {
 
 // ── 26. ADMIN: SET WINNER ──────────────────────────────────
 window.adminSetWinner = async function(matchId, winnerUid) {
-  if (!confirm(
-    `🏆 Winner set garee?\nUID: ${winnerUid.slice(0,16)}...`
-  )) return;
+  if (!confirm(`🏆 Winner set garee?\nUID: ${winnerUid.slice(0,16)}...`)) return;
   if (!requireOnline()) return;
-
   try {
     await runTransaction(db, async tx => {
-      const matchRef  = doc(db, 'matches', matchId);
+      const matchRef  = doc(db,'matches', matchId);
       const matchSnap = await tx.get(matchRef);
       if (!matchSnap.exists()) throw new Error('Match la ma helin');
-
       const m = matchSnap.data();
       if (m.status !== 'locked') throw new Error('Match weli locked ma ahan');
       if (m.winnerId)            throw new Error('Winner horey ayaa la dejiyay');
       if (!m.joinedBy)           throw new Error('Labo ciyaartoy ma jiraan weli');
-
       const loserUid  = winnerUid === m.createdBy ? m.joinedBy : m.createdBy;
-      const prize     = (m.stakeCoins || 0) * 2;
-
-      const winnerRef = doc(db, 'users', winnerUid);
-      const loserRef  = doc(db, 'users', loserUid);
-      const [wSnap, lSnap] = await Promise.all([
-        tx.get(winnerRef), tx.get(loserRef)
-      ]);
-
-      tx.update(matchRef, {
-        winnerId:    winnerUid,
-        status:      'done',
-        completedAt: serverTimestamp()
-      });
-
-      tx.update(winnerRef, {
-        coinBalance:   (wSnap.data().coinBalance   || 0) + prize,
-        escrowBalance: Math.max(0, (wSnap.data().escrowBalance || 0) - m.stakeCoins)
-      });
-
-      tx.update(loserRef, {
-        escrowBalance: Math.max(0, (lSnap.data().escrowBalance || 0) - m.stakeCoins)
-      });
-
-      const t1 = doc(collection(db, 'transactions'));
-      tx.set(t1, {
-        userId: winnerUid, type:'match_win',
-        coins: +prize, relatedMatch: matchId,
-        createdAt: serverTimestamp(), meta: { matchId, loserUid }
-      });
-
-      const t2 = doc(collection(db, 'transactions'));
-      tx.set(t2, {
-        userId: loserUid, type:'match_loss',
-        coins: -m.stakeCoins, relatedMatch: matchId,
-        createdAt: serverTimestamp(), meta: { matchId, winnerUid }
-      });
-
-      const log = doc(collection(db, 'adminLogs'));
-      tx.set(log, {
-        action:'set_winner', adminUid: currentUser.uid,
-        matchId, winnerUid, loserUid, prize,
-        createdAt: serverTimestamp()
-      });
+      const prize     = (m.stakeAmount||0) * 2;
+      const winnerRef = doc(db,'users', winnerUid);
+      const loserRef  = doc(db,'users', loserUid);
+      const [wSnap, lSnap] = await Promise.all([tx.get(winnerRef), tx.get(loserRef)]);
+      tx.update(matchRef,  { winnerId: winnerUid, status:'done', completedAt: serverTimestamp() });
+      tx.update(winnerRef, { sosBalance: (wSnap.data().sosBalance||0) + prize, escrowSOS: Math.max(0,(wSnap.data().escrowSOS||0) - m.stakeAmount) });
+      tx.update(loserRef,  { escrowSOS: Math.max(0,(lSnap.data().escrowSOS||0) - m.stakeAmount) });
+      tx.set(doc(collection(db,'transactions')), { userId: winnerUid, type:'match_win',  sos: +prize,         relatedMatch: matchId, createdAt: serverTimestamp(), meta: { matchId, loserUid } });
+      tx.set(doc(collection(db,'transactions')), { userId: loserUid,  type:'match_loss', sos: -m.stakeAmount, relatedMatch: matchId, createdAt: serverTimestamp(), meta: { matchId, winnerUid } });
+      tx.set(doc(collection(db,'adminLogs')),    { action:'set_winner', adminUid: currentUser.uid, matchId, winnerUid, loserUid, prize, createdAt: serverTimestamp() });
     });
-    showToast('🏆 Winner la dejiyay! Coins waa la qaybiyay.', 'success');
+    showToast('🏆 Winner la dejiyay! SOS waa la qaybiyay.', 'success');
   } catch (err) {
     showToast('Khalad: ' + err.message, 'error');
   }
 };
 
-// ── 27. FILTER CHIPS (dashboard) ──────────────────────────
+// ── 27. FILTER CHIPS ───────────────────────────────────────
 function initFilterChips(matchesContainer) {
   document.querySelectorAll('.filter-chip').forEach(chip => {
     chip.addEventListener('click', () => {
-      document.querySelectorAll('.filter-chip').forEach(c => {
-        c.classList.remove('active');
-        c.setAttribute('aria-selected','false');
-      });
+      document.querySelectorAll('.filter-chip').forEach(c => { c.classList.remove('active'); c.setAttribute('aria-selected','false'); });
       chip.classList.add('active');
       chip.setAttribute('aria-selected','true');
       loadMatches(matchesContainer, chip.dataset.filter || 'all');
@@ -1339,87 +1002,47 @@ function initFilterChips(matchesContainer) {
   });
 }
 
-// ── 28. PROFILE: LOAD STATS ────────────────────────────────
+// ── 28. PROFILE STATS ─────────────────────────────────────
 async function loadProfileStats(uid) {
   try {
-    // Matches count
-    const allMatchesQ = query(
-      collection(db, 'matches'),
-      where('createdBy','==', uid),
-      limit(50)
-    );
-    const joinedMatchesQ = query(
-      collection(db, 'matches'),
-      where('joinedBy','==', uid),
-      limit(50)
-    );
-    const [createdSnap, joinedSnap] = await Promise.all([
-      getDocs(allMatchesQ),
-      getDocs(joinedMatchesQ)
+    const [createdSnap, joinedSnap, winsSnap] = await Promise.all([
+      getDocs(query(collection(db,'matches'), where('createdBy','==',uid), limit(50))),
+      getDocs(query(collection(db,'matches'), where('joinedBy','==',uid),  limit(50))),
+      getDocs(query(collection(db,'transactions'), where('userId','==',uid), where('type','==','match_win'), limit(100)))
     ]);
-
-    // Deduplicate in case of edge cases (user can't be both creator & joiner)
-    const createdIds = new Set(createdSnap.docs.map(d => d.id));
-    const joinedIds  = joinedSnap.docs.map(d => d.id).filter(id => !createdIds.has(id));
-    const totalMatches = createdSnap.size + joinedIds.length;
-
-    // Wins count
-    const winsQ = query(
-      collection(db, 'transactions'),
-      where('userId','==', uid),
-      where('type','==','match_win'),
-      limit(100)
-    );
-    const winsSnap = await getDocs(winsQ);
-    const totalWins = winsSnap.size;
-
-    // Update profile UI
+    const createdIds   = new Set(createdSnap.docs.map(d => d.id));
+    const totalMatches = createdSnap.size + joinedSnap.docs.filter(d => !createdIds.has(d.id)).length;
+    const fmt = window.sosFormat || (n => n.toLocaleString());
     const statCoins   = document.getElementById('stat-coins');
     const statMatches = document.getElementById('stat-matches');
     const statWins    = document.getElementById('stat-wins');
     const statEscrow  = document.getElementById('stat-escrow');
-
-    if (statCoins)   statCoins.textContent   = (currentUserData?.coinBalance   || 0).toLocaleString();
+    if (statCoins)   statCoins.textContent   = fmt(currentUserData?.sosBalance||0);
     if (statMatches) statMatches.textContent = totalMatches;
-    if (statWins)    statWins.textContent    = totalWins;
-    if (statEscrow)  statEscrow.textContent  = (currentUserData?.escrowBalance || 0).toLocaleString();
+    if (statWins)    statWins.textContent    = winsSnap.size;
+    if (statEscrow)  statEscrow.textContent  = fmt(currentUserData?.escrowSOS||0);
   } catch (err) {
     console.error('loadProfileStats:', err);
   }
 }
 
-// ── 29. PROFILE: FILL UI ───────────────────────────────────
+// ── 29. PROFILE FILL UI ────────────────────────────────────
 function fillProfileUI() {
   if (!currentUserData) return;
-
   const u = currentUserData;
-
-  const nameEl    = document.getElementById('profile-name-display');
-  const emailEl   = document.getElementById('profile-email-display');
-  const fnameEl   = document.getElementById('info-fullname');
-  const infoEmail = document.getElementById('info-email');
-  const infoPhone = document.getElementById('info-phone');
-  const infoDate  = document.getElementById('info-createdat');
-  const avatarEl  = document.getElementById('profile-avatar-display');
-  const uidEl     = document.getElementById('profile-uid-display');
+  const initials = (u.fullName||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+  set('profile-name-display',  u.fullName || '—');
+  set('profile-email-display', u.email    || '—');
+  set('info-fullname',         u.fullName || '—');
+  set('info-email',            u.email    || '—');
+  set('info-phone',            u.phone    || 'La ma gelin');
+  set('profile-uid-display',  'UID: ' + (u.uid||'').slice(0,18) + '...');
+  const avatarEl = document.getElementById('profile-avatar-display');
+  if (avatarEl) avatarEl.textContent = initials;
+  const infoDate = document.getElementById('info-createdat');
+  if (infoDate && u.createdAt?.toDate) infoDate.textContent = u.createdAt.toDate().toLocaleDateString('so-SO');
   const roleBadge = document.getElementById('profile-role-badge');
-
-  const initials = (u.fullName || 'U')
-    .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-
-  if (nameEl)    nameEl.textContent    = u.fullName || '—';
-  if (emailEl)   emailEl.textContent   = u.email    || '—';
-  if (fnameEl)   fnameEl.textContent   = u.fullName || '—';
-  if (infoEmail) infoEmail.textContent = u.email    || '—';
-  if (infoPhone) infoPhone.textContent = u.phone    || 'La ma gelin';
-  if (avatarEl)  avatarEl.textContent  = initials;
-  if (uidEl)     uidEl.textContent     = 'UID: ' + (u.uid||'').slice(0, 18) + '...';
-
-  if (infoDate && u.createdAt?.toDate) {
-    infoDate.textContent = u.createdAt.toDate().toLocaleDateString('so-SO');
-  }
-
-  // Role badge
   if (roleBadge) {
     const roleConfig = {
       owner:           { cls:'role-badge-owner',   icon:'👑', label:'Owner'           },
@@ -1430,11 +1053,9 @@ function fillProfileUI() {
       user:            { cls:'role-badge-user',    icon:'👤', label:'User'            }
     };
     const cfg = roleConfig[u.role] || roleConfig.user;
-    roleBadge.className = `role-badge ${cfg.cls}`;
+    roleBadge.className   = `role-badge ${cfg.cls}`;
     roleBadge.textContent = `${cfg.icon} ${cfg.label}`;
   }
-
-  // Pre-fill edit inputs with current values
   const editName  = document.getElementById('edit_fullName');
   const editPhone = document.getElementById('edit_phone');
   if (editName)  editName.placeholder  = u.fullName || 'Magacaaga cusub';
@@ -1444,68 +1065,37 @@ function fillProfileUI() {
 // ── 30. MAIN DOMContentLoaded ──────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
 
-  const page = window.location.pathname.split('/').pop() || 'index.html'; // default to login
+  const page = window.location.pathname.split('/').pop() || 'index.html';
 
-  // Modal overlay tap = xidh
   document.querySelectorAll('.modal-overlay').forEach(overlay => {
     overlay.addEventListener('click', e => {
       if (e.target === overlay) closeModal(overlay.id);
     });
   });
-// ── admin.html ──────────────────────────────────────────
-if (page === 'admin.html') {
-  await authGuard(true);
 
-  // Admin role hubi
-  const role = currentUserData?.role;
-  const adminRoles = ['administrator', 'owner', 'partner_manager'];
-  if (!adminRoles.includes(role)) {
-    showToast('Admin access ma lihid', 'error');
-    setTimeout(() => window.location.replace('dashboard.html'), 1500);
-    return;
-  }
-
-  // Real-time listener for admin page user data
-  onSnapshot(doc(db, 'users', currentUser.uid), snap => {
-    if (snap.exists()) {
-      currentUserData         = snap.data();
-      window._ematch_userdata = currentUserData;
-      updateHeaderUI();
-    }
-  });
-}
   // ════════════════════════════════════════════════════════
   // INDEX.HTML — Login / Register
   // ════════════════════════════════════════════════════════
   if (page === 'index.html' || page === '') {
-    await authGuard(false, 'dashboard.html');
-
-    // Tab switching
+    // If user is already logged in → go to dashboard (authGuard returns null when redirecting)
+    const user = await authGuard(false, 'dashboard.html');
+    if (user) return; // Logged in — redirect already triggered, stop here
+    // No user — show login page normally
+    initPasswordToggles();
+    document.getElementById('login-form')    ?.addEventListener('submit', handleLogin);
+    document.getElementById('register-form') ?.addEventListener('submit', handleSignup);
+    document.getElementById('btn_google')    ?.addEventListener('click',  handleGoogleSignIn);
+    document.getElementById('btn_forgot_pw') ?.addEventListener('click',  window.handlePasswordReset);
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
-        document.querySelectorAll('.tab-btn').forEach(b => {
-          b.classList.remove('active');
-          b.setAttribute('aria-selected','false');
-        });
+        document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
         btn.classList.add('active');
         btn.setAttribute('aria-selected','true');
-        document.querySelectorAll('.tab-content').forEach(c => {
-          c.classList.toggle('hidden', c.dataset.tab !== tab);
-        });
+        document.querySelectorAll('.tab-content').forEach(c => { c.classList.toggle('hidden', c.dataset.tab !== tab); });
       });
     });
-
-    initPasswordToggles();
-
-    document.getElementById('login-form')
-      ?.addEventListener('submit', handleLogin);
-    document.getElementById('register-form')
-      ?.addEventListener('submit', handleSignup);
-    document.getElementById('btn_google')
-      ?.addEventListener('click', handleGoogleSignIn);
-    document.getElementById('btn_forgot_pw')
-      ?.addEventListener('click', window.handlePasswordReset);
+    return; // Stop here — don't run other page blocks
   }
 
   // ════════════════════════════════════════════════════════
@@ -1513,33 +1103,17 @@ if (page === 'admin.html') {
   // ════════════════════════════════════════════════════════
   if (page === 'dashboard.html') {
     await authGuard(true);
-
     const matchesContainer = document.getElementById('matches-list');
     loadMatches(matchesContainer, 'all');
     initFilterChips(matchesContainer);
-
-    document.getElementById('btn_open_create')
-      ?.addEventListener('click', () => openModal('create-match-modal'));
-    document.getElementById('create-match-form')
-      ?.addEventListener('submit', handleCreateMatch);
-    document.getElementById('btn_logout')
-      ?.addEventListener('click', handleLogout);
-
-    // Admin panel
+    document.getElementById('btn_open_create')  ?.addEventListener('click',  () => openModal('create-match-modal'));
+    document.getElementById('create-match-form') ?.addEventListener('submit', handleCreateMatch);
+    document.getElementById('btn_logout')        ?.addEventListener('click',  handleLogout);
     loadDepositRequests(document.getElementById('admin-deposits-container'));
-
-    // pending_join from matches.html
     const pendingJoin = localStorage.getItem('pending_join');
-    if (pendingJoin) {
-      localStorage.removeItem('pending_join');
-      setTimeout(() => openMatchModal(pendingJoin), 600);
-    }
-
-    // open_create flag from other pages
-    if (localStorage.getItem('open_create') === '1') {
-      localStorage.removeItem('open_create');
-      setTimeout(() => openModal('create-match-modal'), 400);
-    }
+    if (pendingJoin) { localStorage.removeItem('pending_join'); setTimeout(() => openMatchModal(pendingJoin), 600); }
+    if (localStorage.getItem('open_create') === '1') { localStorage.removeItem('open_create'); setTimeout(() => openModal('create-match-modal'), 400); }
+    return;
   }
 
   // ════════════════════════════════════════════════════════
@@ -1547,63 +1121,41 @@ if (page === 'admin.html') {
   // ════════════════════════════════════════════════════════
   if (page === 'wallet.html') {
     await authGuard(true);
-
+    const fmt = window.sosFormat || (n => n.toLocaleString());
     function updateWalletDisplay() {
-      const bal = currentUserData?.coinBalance   || 0;
-      const esc = currentUserData?.escrowBalance || 0;
+      const bal = currentUserData?.sosBalance || 0;
+      const esc = currentUserData?.escrowSOS  || 0;
       const coinsEl  = document.getElementById('wallet-coin-balance');
       const escrowEl = document.getElementById('wallet-escrow-balance');
       const usdEl    = document.getElementById('wallet-usd-equiv');
-      if (coinsEl)  coinsEl.textContent  = bal.toLocaleString();
-      if (escrowEl) escrowEl.textContent = esc.toLocaleString();
-      if (usdEl)    usdEl.textContent    = (bal * 0.10).toFixed(2);
+      if (coinsEl)  coinsEl.textContent  = fmt(bal);
+      if (escrowEl) escrowEl.textContent = fmt(esc);
+      if (usdEl)    usdEl.textContent    = (bal / (window._sosRate||32000)).toFixed(2);
     }
-
-    // Real-time balance
     if (currentUser) {
-      onSnapshot(doc(db, 'users', currentUser.uid), snap => {
-        if (snap.exists()) {
-          currentUserData         = snap.data();
-          window._ematch_userdata = currentUserData;
-          updateWalletDisplay();
-          updateHeaderUI();
-        }
+      onSnapshot(doc(db,'users', currentUser.uid), snap => {
+        if (snap.exists()) { currentUserData = snap.data(); window._ematch_userdata = currentUserData; updateWalletDisplay(); updateHeaderUI(); }
       });
     }
-
     updateWalletDisplay();
     loadTransactionHistory(document.getElementById('tx-list'));
-
-    document.getElementById('btn_open_deposit')
-      ?.addEventListener('click', () => openModal('deposit-modal'));
-    document.getElementById('deposit-form')
-      ?.addEventListener('submit', handleDeposit);
-    document.getElementById('btn_open_send')
-      ?.addEventListener('click', () => openModal('send-modal'));
-    document.getElementById('send-coins-form')
-      ?.addEventListener('submit', handleSendCoins);
-    document.getElementById('btn_logout')
-      ?.addEventListener('click', handleLogout);
-
-    // Deposit amount preview
+    document.getElementById('btn_open_deposit')  ?.addEventListener('click',  () => openModal('deposit-modal'));
+    document.getElementById('deposit-form')       ?.addEventListener('submit', handleDeposit);
+    document.getElementById('btn_open_send')      ?.addEventListener('click',  () => openModal('send-modal'));
+    document.getElementById('send-coins-form')    ?.addEventListener('submit', handleSendCoins);
+    document.getElementById('btn_logout')         ?.addEventListener('click',  handleLogout);
     document.getElementById('dep_amount')?.addEventListener('input', function() {
-      const coins   = Math.floor((parseFloat(this.value)||0) / 0.10);
+      const coins   = Math.floor((parseFloat(this.value)||0) * (window._sosRate||32000));
       const preview = document.getElementById('dep_preview_coins');
       const hint    = document.getElementById('dep_coins_preview');
-      if (preview) preview.textContent = coins > 0 ? coins.toLocaleString() : '—';
-      if (hint)    hint.textContent    = coins > 0
-        ? `🪙 ${coins.toLocaleString()} coins la helayaa` : '🪙 Coins la helayo: —';
+      if (preview) preview.textContent = coins > 0 ? fmt(coins) : '—';
+      if (hint)    hint.textContent    = coins > 0 ? ` ${fmt(coins)} SOS la helayaa` : 'SOS la helayo: —';
     });
-
-    // Copy USSD
     document.getElementById('btn_copy_ussd')?.addEventListener('click', () => {
       const code = document.getElementById('ussd-code-display')?.textContent;
-      if (code) {
-        navigator.clipboard.writeText(code)
-          .then(()  => showToast('✅ USSD code la koobiyay', 'success'))
-          .catch(()  => showToast('Koobiyaynta waa fashilantay', 'error'));
-      }
+      if (code) navigator.clipboard.writeText(code).then(() => showToast('✅ USSD code la koobiyay','success')).catch(() => showToast('Koobiyaynta waa fashilantay','error'));
     });
+    return;
   }
 
   // ════════════════════════════════════════════════════════
@@ -1611,113 +1163,86 @@ if (page === 'admin.html') {
   // ════════════════════════════════════════════════════════
   if (page === 'profile.html') {
     await authGuard(true);
-
     fillProfileUI();
     await loadProfileStats(currentUser.uid);
-
-    // Real-time balance updates on profile
-    onSnapshot(doc(db, 'users', currentUser.uid), snap => {
+    onSnapshot(doc(db,'users', currentUser.uid), snap => {
       if (snap.exists()) {
-        currentUserData         = snap.data();
-        window._ematch_userdata = currentUserData;
+        currentUserData = snap.data(); window._ematch_userdata = currentUserData;
         updateHeaderUI();
-
-        // Update live coin stats on profile
+        const fmt = window.sosFormat || (n => n.toLocaleString());
         const statCoins  = document.getElementById('stat-coins');
         const statEscrow = document.getElementById('stat-escrow');
-        if (statCoins)  statCoins.textContent  = (currentUserData.coinBalance  ||0).toLocaleString();
-        if (statEscrow) statEscrow.textContent = (currentUserData.escrowBalance||0).toLocaleString();
+        if (statCoins)  statCoins.textContent  = fmt(currentUserData.sosBalance||0);
+        if (statEscrow) statEscrow.textContent = fmt(currentUserData.escrowSOS||0);
       }
     });
-
-    document.getElementById('btn_logout')
-      ?.addEventListener('click', handleLogout);
-
-    // Edit profile form
-    document.getElementById('edit-profile-form')
-      ?.addEventListener('submit', async function(e) {
-        e.preventDefault();
-        const newName  = document.getElementById('edit_fullName')?.value.trim();
-        const newPhone = document.getElementById('edit_phone')?.value.trim();
-        const btn      = document.getElementById('btn_save_profile');
-
-        document.getElementById('edit_fullName_err').textContent = '';
-        document.getElementById('edit_phone_err').textContent    = '';
-
-        let valid = true;
-        if (newName  && newName.length < 2)   { document.getElementById('edit_fullName_err').textContent='Ugu yaraan 2 xaraf'; valid=false; }
-        if (newPhone && !validatePhone(newPhone)){ document.getElementById('edit_phone_err').textContent='Lambarka sax ma ahan'; valid=false; }
-        if (!newName && !newPhone) { showToast('Wax bedel ah geli', 'error'); return; }
-        if (!valid || !requireOnline()) return;
-
-        setLoading(btn, true);
-        try {
-          const updates = {};
-          if (newName)  updates.fullName = newName;
-          if (newPhone) updates.phone    = newPhone;
-
-          await updateDoc(doc(db, 'users', currentUser.uid), updates);
-
-          // Merge locally
-          Object.assign(currentUserData, updates);
-          window._ematch_userdata = currentUserData;
-
-          fillProfileUI();
-          updateHeaderUI();
-
-          if (document.getElementById('edit_fullName'))
-            document.getElementById('edit_fullName').value = '';
-          if (document.getElementById('edit_phone'))
-            document.getElementById('edit_phone').value   = '';
-
-          showToast('✅ Xogta waa la keydiyay!', 'success');
-        } catch (err) {
-          showToast('Khalad: ' + err.message, 'error');
-        } finally {
-          setLoading(btn, false);
-        }
-      });
-
-    // Password reset from profile
-    document.getElementById('menu_reset_pw')?.addEventListener('click', async () => {
-      const email = currentUserData?.email;
-      if (!email) { showToast('Email la ma helin', 'error'); return; }
-      if (!requireOnline()) return;
+    document.getElementById('btn_logout')?.addEventListener('click', handleLogout);
+    document.getElementById('edit-profile-form')?.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const newName  = document.getElementById('edit_fullName')?.value.trim();
+      const newPhone = document.getElementById('edit_phone')?.value.trim();
+      const btn      = document.getElementById('btn_save_profile');
+      document.getElementById('edit_fullName_err').textContent = '';
+      document.getElementById('edit_phone_err').textContent    = '';
+      let valid = true;
+      if (newName  && newName.length < 2)     { document.getElementById('edit_fullName_err').textContent='Ugu yaraan 2 xaraf'; valid=false; }
+      if (newPhone && !validatePhone(newPhone)){ document.getElementById('edit_phone_err').textContent='Lambarka sax ma ahan'; valid=false; }
+      if (!newName && !newPhone) { showToast('Wax bedel ah geli', 'error'); return; }
+      if (!valid || !requireOnline()) return;
+      setLoading(btn, true);
       try {
-        await sendPasswordResetEmail(auth, email);
-        showToast('✅ Password reset email la diray!', 'success');
+        const updates = {};
+        if (newName)  updates.fullName = newName;
+        if (newPhone) updates.phone    = newPhone;
+        await updateDoc(doc(db,'users', currentUser.uid), updates);
+        Object.assign(currentUserData, updates);
+        window._ematch_userdata = currentUserData;
+        fillProfileUI(); updateHeaderUI();
+        const editFN = document.getElementById('edit_fullName');
+        const editPH = document.getElementById('edit_phone');
+        if (editFN) editFN.value = '';
+        if (editPH) editPH.value = '';
+        showToast('✅ Xogta waa la keydiyay!', 'success');
       } catch (err) {
         showToast('Khalad: ' + err.message, 'error');
+      } finally {
+        setLoading(btn, false);
       }
     });
-
-    // Share
+    document.getElementById('menu_reset_pw')?.addEventListener('click', async () => {
+      const email = currentUserData?.email;
+      if (!email) { showToast('Email la ma helin','error'); return; }
+      if (!requireOnline()) return;
+      try { await sendPasswordResetEmail(auth, email); showToast('✅ Password reset email la diray!','success'); }
+      catch (err) { showToast('Khalad: ' + err.message,'error'); }
+    });
     document.getElementById('menu_share')?.addEventListener('click', () => {
-      if (navigator.share) {
-        navigator.share({
-          title: 'eMatch — Gaming Platform',
-          text:  'Kaalay eMatch ku ciyaar, tartam, coins guuleeso! 🎮',
-          url:   window.location.origin
-        }).catch(() => {});
-      } else {
-        navigator.clipboard.writeText(window.location.origin)
-          .then(() => showToast('✅ Link la koobiyay!', 'success'));
-      }
+      if (navigator.share) { navigator.share({ title:'eMatch', text:'Kaalay eMatch ku ciyaar! 🎮', url: window.location.origin }).catch(()=>{}); }
+      else navigator.clipboard.writeText(window.location.origin).then(() => showToast('✅ Link la koobiyay!','success'));
     });
-
-    // About modal
-    document.getElementById('menu_about')
-      ?.addEventListener('click', () => openModal('about-modal'));
-
-    // Copy UID
+    document.getElementById('menu_about')?.addEventListener('click', () => openModal('about-modal'));
     window.copyUID = function() {
       const uid = currentUser?.uid;
-      if (uid) {
-        navigator.clipboard.writeText(uid)
-          .then(() => showToast('✅ UID la koobiyay!', 'success'))
-          .catch(() => showToast('Koobiyaynta waa fashilantay', 'error'));
-      }
+      if (uid) navigator.clipboard.writeText(uid).then(() => showToast('✅ UID la koobiyay!','success')).catch(() => showToast('Koobiyaynta waa fashilantay','error'));
     };
+    return;
+  }
+
+  // ════════════════════════════════════════════════════════
+  // ADMIN.HTML
+  // ════════════════════════════════════════════════════════
+  if (page === 'admin.html') {
+    await authGuard(true);
+    const adminRoles = ['administrator','owner','partner_manager'];
+    if (!adminRoles.includes(currentUserData?.role)) {
+      showToast('Admin access ma lihid', 'error');
+      setTimeout(() => window.location.replace('dashboard.html'), 1500);
+      return;
+    }
+    onSnapshot(doc(db,'users', currentUser.uid), snap => {
+      if (snap.exists()) { currentUserData = snap.data(); window._ematch_userdata = currentUserData; updateHeaderUI(); }
+    });
+    return;
   }
 
   // ════════════════════════════════════════════════════════
@@ -1725,10 +1250,8 @@ if (page === 'admin.html') {
   // ════════════════════════════════════════════════════════
   if (page === 'matches.html') {
     await authGuard(true);
-
-    // matches.html waxay leedahay script module-keeda gaar ah
-    // app.js waxay u gudbisaa: currentUser, db, userdata globals
-    // Exposed already via window._ematch_* above
+    // Script module-keeda gaar ah ayaa matches.html xukuma
+    // window._ematch_* globals ayaa la wadaagaa
   }
 
 });

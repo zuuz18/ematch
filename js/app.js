@@ -1347,7 +1347,27 @@ function fillProfileUI() {
 
 // ── 30. MAIN DOMContentLoaded ──────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
+(function loadCacheInstant() {
+    try {
+      const cached = localStorage.getItem('ematch_user_cache');
+      if (!cached) return;
+      const data = JSON.parse(cached);
+      if (!data?.uid) return;
+      currentUserData         = data;
+      window._ematch_uid      = data.uid;
+      window._ematch_userdata = data;
+      updateHeaderUI();
+      requestAnimationFrame(() => updateHeaderUI());
+      setTimeout(() => updateHeaderUI(), 300);
+      setTimeout(() => updateHeaderUI(), 800);
+    } catch (_) {}
+  })();
 
+  setTimeout(() => { if (currentUserData) updateHeaderUI(); }, 500);
+  // ── KA DAMBEEYA ──
+
+  const page = window.location.pathname.split('/').pop() || 'index.html';
+  initNavigation();
   const page = window.location.pathname.split('/').pop() || 'index.html'; // default to login
 
   initNavigation();

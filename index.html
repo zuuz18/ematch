@@ -19,7 +19,6 @@
       --p:   #a855f7;
       --red: #ff3d5a;
       --bg:  #050810;
-      --card: rgba(255,255,255,.04);
       --border: rgba(255,255,255,.08);
       --text: #f0f4ff;
       --muted: rgba(240,244,255,.4);
@@ -35,9 +34,7 @@
       overflow-x: hidden;
     }
 
-    /* ═══════════════════════════════════════════════════
-       LOADING SCREEN
-    ═══════════════════════════════════════════════════ */
+    /* ══ LOADING ══════════════════════════════════════ */
     #loading-screen {
       position: fixed; inset: 0;
       background: var(--bg);
@@ -48,475 +45,332 @@
     }
     #loading-screen.fade-out { opacity: 0; pointer-events: none; }
 
-    .ld-logo {
-      position: relative;
-      width: 90px; height: 90px;
-      margin-bottom: 28px;
-    }
+    .ld-logo { position: relative; width: 80px; height: 80px; margin-bottom: 22px; }
     .ld-logo-inner {
-      width: 90px; height: 90px;
-      border-radius: 22px;
+      width: 80px; height: 80px; border-radius: 20px;
       background: linear-gradient(135deg, #001a0d, #001220);
       border: 1px solid rgba(0,255,136,.25);
       display: flex; align-items: center; justify-content: center;
-      font-size: 42px;
-      position: relative; z-index: 1;
+      font-size: 38px; position: relative; z-index: 1;
       animation: ldFloat 2.4s ease-in-out infinite;
     }
-    @keyframes ldFloat {
-      0%,100% { transform: translateY(0); }
-      50%      { transform: translateY(-6px); }
-    }
+    @keyframes ldFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
     .ld-ring {
-      position: absolute; inset: -10px;
-      border-radius: 32px;
+      position: absolute; inset: -10px; border-radius: 30px;
       border: 2px solid transparent;
       background: linear-gradient(var(--bg),var(--bg)) padding-box,
-                  conic-gradient(var(--g), var(--b), var(--p), var(--g)) border-box;
+                  conic-gradient(var(--g),var(--b),var(--p),var(--g)) border-box;
       animation: ldSpin 2s linear infinite;
     }
-    @keyframes ldSpin { to { transform: rotate(360deg); } }
-
+    @keyframes ldSpin { to{transform:rotate(360deg)} }
     .ld-title {
-      font-family: var(--font-display);
-      font-size: 32px; font-weight: 700;
+      font-family: var(--font-display); font-size: 30px; font-weight: 700;
       letter-spacing: 4px;
       background: linear-gradient(90deg, var(--g), var(--b));
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
     }
-    .ld-sub { font-size: 11px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
-    .ld-bar {
-      width: 120px; height: 2px;
-      background: var(--border);
-      border-radius: 99px;
-      margin-top: 24px;
-      overflow: hidden;
-    }
+    .ld-sub { font-size: 10px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+    .ld-bar { width: 100px; height: 2px; background: var(--border); border-radius: 99px; margin-top: 18px; overflow: hidden; }
     .ld-bar-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--g), var(--b));
-      border-radius: 99px;
+      height: 100%; background: linear-gradient(90deg,var(--g),var(--b)); border-radius: 99px;
       animation: ldBar 1.8s ease-in-out infinite;
     }
     @keyframes ldBar {
-      0%   { width: 0%; margin-left: 0%; }
-      50%  { width: 60%; margin-left: 20%; }
-      100% { width: 0%; margin-left: 100%; }
+      0%{width:0%;margin-left:0%} 50%{width:60%;margin-left:20%} 100%{width:0%;margin-left:100%}
     }
 
-    /* ═══════════════════════════════════════════════════
-       ANIMATED BACKGROUND
-    ═══════════════════════════════════════════════════ */
+    /* ══ AUTH PAGE — scrollable, centers on tall screens ══ */
     #auth-page {
-      min-height: 100vh;
+      min-height: 100dvh;
       position: relative;
       opacity: 0;
       transition: opacity .5s ease;
-      overflow: hidden;
+      overflow-x: hidden;
+      overflow-y: auto;
     }
     #auth-page.visible { opacity: 1; }
 
+    /* ── Background ── */
     .bg-grid {
-      position: fixed; inset: 0; z-index: 0;
+      position: fixed; inset: 0; z-index: 0; pointer-events: none;
       background-image:
         linear-gradient(rgba(0,255,136,.03) 1px, transparent 1px),
         linear-gradient(90deg, rgba(0,255,136,.03) 1px, transparent 1px);
       background-size: 40px 40px;
-      pointer-events: none;
     }
-    .bg-orb {
-      position: fixed; border-radius: 50%;
-      filter: blur(80px); pointer-events: none; z-index: 0;
-    }
+    .bg-orb { position: fixed; border-radius: 50%; filter: blur(80px); pointer-events: none; z-index: 0; }
     .bg-orb-1 {
-      width: 340px; height: 340px;
-      background: radial-gradient(circle, rgba(0,255,136,.12), transparent 70%);
+      width: 300px; height: 300px;
+      background: radial-gradient(circle,rgba(0,255,136,.12),transparent 70%);
       top: -80px; left: -80px;
-      animation: orbDrift1 8s ease-in-out infinite;
+      animation: orb1 8s ease-in-out infinite;
     }
     .bg-orb-2 {
-      width: 280px; height: 280px;
-      background: radial-gradient(circle, rgba(0,170,255,.10), transparent 70%);
-      bottom: 20%; right: -60px;
-      animation: orbDrift2 10s ease-in-out infinite;
+      width: 240px; height: 240px;
+      background: radial-gradient(circle,rgba(0,170,255,.10),transparent 70%);
+      bottom: 10%; right: -60px;
+      animation: orb2 10s ease-in-out infinite;
     }
     .bg-orb-3 {
-      width: 200px; height: 200px;
-      background: radial-gradient(circle, rgba(168,85,247,.08), transparent 70%);
+      width: 180px; height: 180px;
+      background: radial-gradient(circle,rgba(168,85,247,.08),transparent 70%);
       top: 50%; left: 30%;
-      animation: orbDrift3 12s ease-in-out infinite;
+      animation: orb3 12s ease-in-out infinite;
     }
-    @keyframes orbDrift1 {
-      0%,100% { transform: translate(0,0) scale(1); }
-      50%      { transform: translate(30px,20px) scale(1.1); }
-    }
-    @keyframes orbDrift2 {
-      0%,100% { transform: translate(0,0); }
-      50%      { transform: translate(-20px,-30px); }
-    }
-    @keyframes orbDrift3 {
-      0%,100% { transform: translate(0,0) scale(1); }
-      33%      { transform: translate(20px,-15px) scale(1.15); }
-      66%      { transform: translate(-15px,20px) scale(.9); }
-    }
+    @keyframes orb1 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(30px,20px)} }
+    @keyframes orb2 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(-20px,-30px)} }
+    @keyframes orb3 { 0%,100%{transform:translate(0,0)} 50%{transform:translate(20px,-20px)} }
 
-    /* floating particles */
     .particle {
-      position: fixed; border-radius: 50%;
-      pointer-events: none; z-index: 0;
-      animation: particleFly linear infinite;
+      position: fixed; border-radius: 50%; pointer-events: none; z-index: 0;
+      animation: pFly linear infinite;
     }
-    @keyframes particleFly {
-      0%   { transform: translateY(100vh) rotate(0deg); opacity: 0; }
-      10%  { opacity: 1; }
-      90%  { opacity: 1; }
-      100% { transform: translateY(-20vh) rotate(720deg); opacity: 0; }
+    @keyframes pFly {
+      0%{transform:translateY(100vh) rotate(0deg);opacity:0}
+      10%{opacity:1} 90%{opacity:1}
+      100%{transform:translateY(-20vh) rotate(720deg);opacity:0}
     }
 
-    /* ═══════════════════════════════════════════════════
-       SCROLL CONTAINER
-    ═══════════════════════════════════════════════════ */
+    /* ── Scroll wrapper — centers vertically, scrolls when short ── */
     .auth-scroll {
       position: relative; z-index: 1;
-      min-height: 100vh;
+      min-height: 100dvh;
       display: flex; flex-direction: column;
-      padding-bottom: 20px;
+      justify-content: center;
+      padding: clamp(16px,4vh,36px) 16px clamp(16px,3vh,28px);
     }
 
-    /* ═══════════════════════════════════════════════════
-       HERO
-    ═══════════════════════════════════════════════════ */
-    .auth-hero {
-      padding: 28px 24px 20px;
-      text-align: center;
-    }
+    /* ── Hero ── */
+    .auth-hero { text-align: center; padding-bottom: clamp(10px,2vh,20px); }
+
     .hero-badge {
       display: inline-flex; align-items: center; gap: 6px;
-      background: rgba(0,255,136,.08);
-      border: 1px solid rgba(0,255,136,.2);
-      border-radius: 99px;
-      padding: 5px 14px;
-      font-size: 11px; font-weight: 600;
-      color: var(--g); letter-spacing: 1px;
-      text-transform: uppercase;
-      margin-bottom: 12px;
-      animation: fadeSlideDown .6s ease both;
+      background: rgba(0,255,136,.08); border: 1px solid rgba(0,255,136,.2);
+      border-radius: 99px; padding: 4px 12px;
+      font-size: 10px; font-weight: 600; color: var(--g);
+      letter-spacing: 1px; text-transform: uppercase;
+      margin-bottom: clamp(8px,1.5vh,14px);
+      animation: slideDown .6s ease both;
     }
     .hero-badge::before {
-      content: '';
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--g);
-      animation: badgePulse 1.5s ease-in-out infinite;
+      content:''; width:6px; height:6px; border-radius:50%; background:var(--g);
+      animation: bPulse 1.5s ease-in-out infinite;
     }
-    @keyframes badgePulse {
-      0%,100% { opacity: 1; transform: scale(1); }
-      50%      { opacity: .4; transform: scale(.7); }
-    }
+    @keyframes bPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.4;transform:scale(.7)} }
 
     .hero-logo-wrap {
       position: relative;
-      width: 72px; height: 72px;
-      margin: 0 auto 14px;
-      animation: fadeSlideDown .6s .1s ease both;
+      width: clamp(52px,10vh,68px); height: clamp(52px,10vh,68px);
+      margin: 0 auto clamp(8px,1.5vh,14px);
+      animation: slideDown .6s .1s ease both;
     }
     .hero-logo {
-      width: 72px; height: 72px;
-      border-radius: 18px;
-      background: linear-gradient(135deg, #001a0d 0%, #001628 100%);
+      width: 100%; height: 100%;
+      border-radius: clamp(13px,3vh,17px);
+      background: linear-gradient(135deg,#001a0d,#001628);
       border: 1px solid rgba(0,255,136,.2);
       display: flex; align-items: center; justify-content: center;
-      font-size: 40px;
+      font-size: clamp(26px,5vh,34px);
       position: relative; z-index: 1;
-      box-shadow:
-        0 0 0 1px rgba(0,255,136,.1),
-        0 0 30px rgba(0,255,136,.15),
-        inset 0 1px 0 rgba(255,255,255,.06);
+      box-shadow: 0 0 0 1px rgba(0,255,136,.1), 0 0 24px rgba(0,255,136,.15);
     }
     .hero-logo-glow {
-      position: absolute; inset: -8px;
-      border-radius: 30px;
-      background: radial-gradient(circle at 50% 50%, rgba(0,255,136,.2), transparent 70%);
-      animation: glowPulse 2.5s ease-in-out infinite;
+      position: absolute; inset: -8px; border-radius: 25px;
+      background: radial-gradient(circle,rgba(0,255,136,.2),transparent 70%);
+      animation: gPulse 2.5s ease-in-out infinite;
     }
-    @keyframes glowPulse {
-      0%,100% { opacity: .6; transform: scale(1); }
-      50%      { opacity: 1; transform: scale(1.08); }
-    }
+    @keyframes gPulse { 0%,100%{opacity:.6;transform:scale(1)} 50%{opacity:1;transform:scale(1.08)} }
 
     .hero-title {
       font-family: var(--font-display);
-      font-size: 34px; font-weight: 700;
-      letter-spacing: 5px;
-      line-height: 1;
-      background: linear-gradient(135deg, #fff 30%, var(--g) 100%);
+      font-size: clamp(26px,5vh,36px); font-weight: 700;
+      letter-spacing: 5px; line-height: 1;
+      background: linear-gradient(135deg,#fff 30%,var(--g) 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      margin-bottom: 6px;
-      animation: fadeSlideDown .6s .2s ease both;
+      margin-bottom: 4px;
+      animation: slideDown .6s .2s ease both;
     }
     .hero-tagline {
-      font-size: 12px; color: var(--muted);
+      font-size: clamp(9px,1.8vh,11px); color: var(--muted);
       letter-spacing: 2.5px; text-transform: uppercase;
-      animation: fadeSlideDown .6s .3s ease both;
+      animation: slideDown .6s .3s ease both;
     }
     .hero-tagline span { color: var(--g); }
 
-    /* ═══════════════════════════════════════════════════
-       CARD
-    ═══════════════════════════════════════════════════ */
+    /* ── Card ── */
     .auth-card {
-      margin: 0 16px;
+      width: 100%; max-width: 440px; margin: 0 auto;
       background: rgba(255,255,255,.03);
       border: 1px solid var(--border);
-      border-radius: 24px;
-      overflow: hidden;
+      border-radius: 22px; overflow: hidden;
       backdrop-filter: blur(20px);
-      box-shadow:
-        0 0 0 1px rgba(255,255,255,.03),
-        0 24px 60px rgba(0,0,0,.6),
-        inset 0 1px 0 rgba(255,255,255,.06);
-      animation: fadeSlideUp .6s .35s ease both;
+      box-shadow: 0 0 0 1px rgba(255,255,255,.03), 0 20px 50px rgba(0,0,0,.6), inset 0 1px 0 rgba(255,255,255,.06);
+      animation: slideUp .6s .35s ease both;
     }
 
-    /* ── Tabs ───────────────────────────────────────── */
+    /* ── Tabs ── */
     .auth-tabs {
       display: grid; grid-template-columns: 1fr 1fr;
       background: rgba(0,0,0,.3);
       border-bottom: 1px solid var(--border);
-      padding: 6px;
-      gap: 4px;
+      padding: 5px; gap: 4px;
     }
     .tab-btn {
-      padding: 12px;
+      padding: clamp(9px,1.5vh,12px);
       font-size: 13px; font-weight: 700;
-      color: var(--muted);
-      text-align: center; cursor: pointer;
-      border: none; background: none;
-      font-family: var(--font-body);
-      border-radius: 14px;
-      transition: all .2s ease;
-      letter-spacing: .3px;
+      color: var(--muted); text-align: center; cursor: pointer;
+      border: none; background: none; font-family: var(--font-body);
+      border-radius: 12px; transition: all .2s ease; letter-spacing: .3px;
       -webkit-tap-highlight-color: transparent;
       position: relative; overflow: hidden;
     }
     .tab-btn.active {
-      background: rgba(0,255,136,.08);
-      color: var(--g);
+      background: rgba(0,255,136,.08); color: var(--g);
       border: 1px solid rgba(0,255,136,.15);
     }
     .tab-btn.active::after {
-      content: '';
-      position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
-      width: 24px; height: 2px;
-      background: var(--g);
-      border-radius: 99px;
+      content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+      width: 24px; height: 2px; background: var(--g); border-radius: 99px;
     }
 
-    /* ── Form Body ──────────────────────────────────── */
-    .tab-content {
-      padding: 18px 18px 22px;
-    }
+    /* ── Form area ── */
+    .tab-content { padding: clamp(12px,2.2vh,20px) 16px clamp(14px,2.2vh,22px); }
     .tab-content.hidden { display: none; }
 
-    /* form entry animations */
-    .tab-content.tab-enter .form-group {
-      animation: formGroupIn .4s ease both;
-    }
-    .tab-content.tab-enter .form-group:nth-child(1) { animation-delay: .05s; }
-    .tab-content.tab-enter .form-group:nth-child(2) { animation-delay: .10s; }
-    .tab-content.tab-enter .form-group:nth-child(3) { animation-delay: .15s; }
-    .tab-content.tab-enter .form-group:nth-child(4) { animation-delay: .20s; }
-    .tab-content.tab-enter .btn-auth               { animation: formGroupIn .4s .25s ease both; }
-    .tab-content.tab-enter .auth-divider           { animation: formGroupIn .4s .28s ease both; }
-    .tab-content.tab-enter .btn-google             { animation: formGroupIn .4s .32s ease both; }
-    @keyframes formGroupIn {
-      from { opacity: 0; transform: translateY(12px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    .tab-content.tab-enter .form-group { animation: fgIn .4s ease both; }
+    .tab-content.tab-enter .form-group:nth-child(1){animation-delay:.05s}
+    .tab-content.tab-enter .form-group:nth-child(2){animation-delay:.10s}
+    .tab-content.tab-enter .form-group:nth-child(3){animation-delay:.15s}
+    .tab-content.tab-enter .form-group:nth-child(4){animation-delay:.20s}
+    .tab-content.tab-enter .btn-auth    {animation:fgIn .4s .25s ease both}
+    .tab-content.tab-enter .auth-divider{animation:fgIn .4s .28s ease both}
+    .tab-content.tab-enter .btn-google  {animation:fgIn .4s .32s ease both}
+    @keyframes fgIn { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
 
-    /* ── Form Groups ────────────────────────────────── */
-    .form-group { margin-bottom: 12px; }
+    .form-group { margin-bottom: clamp(8px,1.4vh,13px); }
     .form-group label {
-      display: block;
-      font-size: 11px; font-weight: 600;
-      color: var(--muted);
-      margin-bottom: 7px;
+      display: block; font-size: 10px; font-weight: 600;
+      color: var(--muted); margin-bottom: 5px;
       text-transform: uppercase; letter-spacing: .8px;
     }
 
-    /* ── Inputs ─────────────────────────────────────── */
     .input-wrap { position: relative; }
     .input-wrap input {
       width: 100%;
       background: rgba(255,255,255,.05);
       border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 12px 16px;
-      font-size: 15px; color: var(--text);
-      font-family: var(--font-body);
-      transition: all .2s ease;
-      outline: none;
+      border-radius: 12px;
+      padding: clamp(10px,1.6vh,13px) 16px;
+      font-size: 15px; color: var(--text); font-family: var(--font-body);
+      transition: all .2s ease; outline: none;
     }
     .input-wrap input::placeholder { color: rgba(240,244,255,.2); }
     .input-wrap input:focus {
-      border-color: rgba(0,255,136,.4);
-      background: rgba(0,255,136,.04);
-      box-shadow: 0 0 0 3px rgba(0,255,136,.08), 0 0 20px rgba(0,255,136,.06);
+      border-color: rgba(0,255,136,.4); background: rgba(0,255,136,.04);
+      box-shadow: 0 0 0 3px rgba(0,255,136,.08);
     }
-    .input-wrap input.input-error {
-      border-color: rgba(255,61,90,.5);
-      background: rgba(255,61,90,.04);
-    }
+    .input-wrap input.input-error { border-color: rgba(255,61,90,.5); background: rgba(255,61,90,.04); }
     .input-icon {
-      position: absolute; left: 14px; top: 50%;
-      transform: translateY(-50%);
-      color: var(--muted); font-size: 16px;
-      pointer-events: none;
+      position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+      font-size: 14px; pointer-events: none;
     }
-    .input-wrap.has-icon input { padding-left: 42px; }
+    .input-wrap.has-icon input { padding-left: 38px; }
     .pw-toggle {
-      position: absolute; right: 12px; top: 50%;
-      transform: translateY(-50%);
-      background: none; border: none;
-      color: var(--muted); cursor: pointer; padding: 4px;
-      display: flex; align-items: center;
-      transition: color .2s;
+      position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+      background: none; border: none; color: var(--muted); cursor: pointer;
+      padding: 4px; display: flex; align-items: center; transition: color .2s;
     }
     .pw-toggle:hover { color: var(--text); }
-
     .error-msg {
-      font-size: 11px; color: var(--red);
-      margin-top: 5px; min-height: 15px;
-      display: block; padding-left: 4px;
+      font-size: 10px; color: var(--red);
+      margin-top: 3px; min-height: 13px; display: block; padding-left: 3px;
     }
 
-    /* ── Forgot link ────────────────────────────────── */
     .forgot-link {
-      background: none; border: none;
-      color: var(--g); font-size: 12px; font-weight: 600;
-      cursor: pointer; font-family: var(--font-body);
-      padding: 0; margin-top: 8px;
-      display: block; text-align: right;
-      opacity: .8; transition: opacity .2s;
+      background: none; border: none; color: var(--g);
+      font-size: 11px; font-weight: 600; cursor: pointer;
+      font-family: var(--font-body); padding: 0; margin-top: 5px;
+      display: block; text-align: right; opacity: .8;
     }
-    .forgot-link:hover { opacity: 1; }
 
-    /* ── Submit Button ──────────────────────────────── */
     .btn-auth {
-      width: 100%; margin-top: 14px;
-      padding: 13px;
-      background: linear-gradient(135deg, #00cc6a, #00aadd);
-      border: none; border-radius: 14px;
-      font-size: 15px; font-weight: 700;
-      color: #000; font-family: var(--font-body);
-      cursor: pointer; letter-spacing: .3px;
-      position: relative; overflow: hidden;
-      transition: all .2s ease;
+      width: 100%; margin-top: clamp(10px,1.6vh,14px);
+      padding: clamp(11px,1.6vh,14px);
+      background: linear-gradient(135deg,#00cc6a,#00aadd);
+      border: none; border-radius: 12px;
+      font-size: 14px; font-weight: 700; color: #000;
+      font-family: var(--font-body); cursor: pointer; letter-spacing: .3px;
+      position: relative; overflow: hidden; transition: all .2s ease;
       display: flex; align-items: center; justify-content: center; gap: 8px;
-      box-shadow: 0 4px 20px rgba(0,255,136,.25);
+      box-shadow: 0 4px 18px rgba(0,255,136,.25);
     }
     .btn-auth::before {
-      content: '';
-      position: absolute; inset: 0;
-      background: linear-gradient(135deg, rgba(255,255,255,.15), transparent);
-      opacity: 0; transition: opacity .2s;
+      content:''; position:absolute; inset:0;
+      background:linear-gradient(135deg,rgba(255,255,255,.15),transparent);
+      opacity:0; transition:opacity .2s;
     }
-    .btn-auth:hover::before { opacity: 1; }
-    .btn-auth:active { transform: scale(.97); }
+    .btn-auth:hover::before{opacity:1}
+    .btn-auth:active{transform:scale(.97)}
     .btn-auth .btn-spinner {
-      display: none;
-      width: 18px; height: 18px;
-      border: 2px solid rgba(0,0,0,.2);
-      border-top-color: #000;
-      border-radius: 50%;
-      animation: spin .6s linear infinite;
+      display:none; width:17px; height:17px;
+      border:2px solid rgba(0,0,0,.2); border-top-color:#000;
+      border-radius:50%; animation:spin .6s linear infinite;
     }
-    @keyframes spin { to { transform: rotate(360deg); } }
-    .btn-auth.loading .btn-text { display: none; }
-    .btn-auth.loading .btn-spinner { display: block; }
+    @keyframes spin{to{transform:rotate(360deg)}}
+    .btn-auth.loading .btn-text{display:none}
+    .btn-auth.loading .btn-spinner{display:block}
 
-    /* ── Divider ────────────────────────────────────── */
     .auth-divider {
-      display: flex; align-items: center; gap: 12px;
-      margin: 12px 0;
-      color: var(--muted); font-size: 11px; font-weight: 600;
+      display: flex; align-items: center; gap: 10px;
+      margin: clamp(8px,1.4vh,12px) 0;
+      color: var(--muted); font-size: 10px; font-weight: 600;
       text-transform: uppercase; letter-spacing: 1px;
     }
-    .auth-divider::before, .auth-divider::after {
-      content: ''; flex: 1; height: 1px;
-      background: linear-gradient(90deg, transparent, var(--border), transparent);
+    .auth-divider::before,.auth-divider::after {
+      content:''; flex:1; height:1px;
+      background:linear-gradient(90deg,transparent,var(--border),transparent);
     }
 
-    /* ── Google Button ──────────────────────────────── */
     .btn-google {
       width: 100%;
-      background: rgba(255,255,255,.05);
-      border: 1px solid var(--border);
-      border-radius: 14px;
-      padding: 12px;
-      font-size: 14px; font-weight: 600;
-      color: var(--text); font-family: var(--font-body);
-      cursor: pointer;
-      display: flex; align-items: center;
-      justify-content: center; gap: 10px;
-      transition: all .2s ease;
-      -webkit-tap-highlight-color: transparent;
+      background: rgba(255,255,255,.05); border: 1px solid var(--border);
+      border-radius: 12px; padding: clamp(10px,1.6vh,13px);
+      font-size: 13px; font-weight: 600; color: var(--text);
+      font-family: var(--font-body); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      transition: all .2s ease; -webkit-tap-highlight-color: transparent;
     }
-    .btn-google:hover {
-      background: rgba(255,255,255,.08);
-      border-color: rgba(255,255,255,.15);
-    }
-    .btn-google:active { transform: scale(.97); }
+    .btn-google:hover { background:rgba(255,255,255,.08); border-color:rgba(255,255,255,.15); }
+    .btn-google:active{transform:scale(.97)}
 
-    /* ── Terms ──────────────────────────────────────── */
     .auth-terms {
-      font-size: 11px; color: var(--muted);
-      text-align: center; margin-top: 16px; line-height: 1.6;
+      font-size: 10px; color: var(--muted);
+      text-align: center; margin-top: 10px; line-height: 1.6;
     }
 
-    /* ═══════════════════════════════════════════════════
-       STATS ROW (below card)
-    ═══════════════════════════════════════════════════ */
+    /* ── Stats row ── */
     .auth-stats {
-      display: flex; justify-content: center; gap: 32px;
-      padding: 16px 0 6px;
-      animation: fadeSlideUp .6s .5s ease both;
+      display: flex; justify-content: center; gap: 28px;
+      padding: clamp(10px,1.8vh,18px) 0 0;
+      max-width: 440px; margin: 0 auto;
+      animation: slideUp .6s .5s ease both;
     }
     .auth-stat { text-align: center; }
     .auth-stat-val {
-      font-family: var(--font-display);
-      font-size: 20px; font-weight: 700;
-      color: var(--g); letter-spacing: 1px;
-      line-height: 1;
+      font-family: var(--font-display); font-size: 18px; font-weight: 700;
+      color: var(--g); letter-spacing: 1px; line-height: 1;
     }
-    .auth-stat-lbl {
-      font-size: 10px; color: var(--muted);
-      text-transform: uppercase; letter-spacing: 1px;
-      margin-top: 3px;
-    }
-    .auth-stat-sep {
-      width: 1px; background: var(--border);
-      align-self: stretch; margin: 4px 0;
-    }
+    .auth-stat-lbl { font-size: 9px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 2px; }
+    .auth-stat-sep { width: 1px; background: var(--border); align-self: stretch; margin: 3px 0; }
 
-    /* ═══════════════════════════════════════════════════
-       KEYFRAMES
-    ═══════════════════════════════════════════════════ */
-    @keyframes fadeSlideDown {
-      from { opacity: 0; transform: translateY(-16px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
-    @keyframes fadeSlideUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to   { opacity: 1; transform: translateY(0); }
-    }
+    @keyframes slideDown { from{opacity:0;transform:translateY(-14px)} to{opacity:1;transform:translateY(0)} }
+    @keyframes slideUp   { from{opacity:0;transform:translateY(16px)}  to{opacity:1;transform:translateY(0)} }
 
-    /* ── Offline Banner ─────────────────────────────── */
     .offline-banner {
       position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      background: rgba(255,61,90,.9);
-      color: #fff; text-align: center;
-      padding: 10px; font-size: 13px; font-weight: 600;
+      background: rgba(255,61,90,.9); color: #fff;
+      text-align: center; padding: 10px; font-size: 13px; font-weight: 600;
     }
     .offline-banner.hidden { display: none; }
 
@@ -525,9 +379,7 @@
 <body>
 <div id="app">
 
-  <!-- ═══════════════════════════════════════════════════
-       LOADING SCREEN
-  ═══════════════════════════════════════════════════ -->
+  <!-- LOADING -->
   <div id="loading-screen">
     <div class="ld-logo">
       <div class="ld-ring"></div>
@@ -538,18 +390,13 @@
     <div class="ld-bar"><div class="ld-bar-fill"></div></div>
   </div>
 
-  <!-- ═══════════════════════════════════════════════════
-       AUTH PAGE
-  ═══════════════════════════════════════════════════ -->
+  <!-- AUTH PAGE -->
   <div id="auth-page">
 
-    <!-- Background -->
     <div class="bg-grid"></div>
     <div class="bg-orb bg-orb-1"></div>
     <div class="bg-orb bg-orb-2"></div>
     <div class="bg-orb bg-orb-3"></div>
-
-    <!-- Particles (JS injects these) -->
     <div id="particles"></div>
 
     <div id="offline-banner" class="offline-banner hidden" role="alert">
@@ -572,7 +419,6 @@
       <!-- Card -->
       <div class="auth-card">
 
-        <!-- Tabs -->
         <div class="auth-tabs">
           <button class="tab-btn active" data-tab="login"    aria-selected="true">🔑 Gal</button>
           <button class="tab-btn"        data-tab="register" aria-selected="false">⚡ Diiwaan Geli</button>
@@ -586,9 +432,7 @@
               <label for="login_email">Email</label>
               <div class="input-wrap has-icon">
                 <span class="input-icon">✉️</span>
-                <input type="email" id="login_email"
-                  placeholder="email@example.com"
-                  autocomplete="email" inputmode="email">
+                <input type="email" id="login_email" placeholder="email@example.com" autocomplete="email" inputmode="email">
               </div>
               <span class="error-msg" id="login_email_err"></span>
             </div>
@@ -597,14 +441,10 @@
               <label for="login_password">Password</label>
               <div class="input-wrap has-icon">
                 <span class="input-icon">🔒</span>
-                <input type="password" id="login_password"
-                  placeholder="••••••••"
-                  autocomplete="current-password">
+                <input type="password" id="login_password" placeholder="••••••••" autocomplete="current-password">
                 <button type="button" class="pw-toggle" aria-label="Password muuji/qari">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                   </svg>
                 </button>
               </div>
@@ -620,7 +460,7 @@
             <div class="auth-divider">ama</div>
 
             <button type="button" class="btn-google" id="btn_google">
-              <svg width="18" height="18" viewBox="0 0 24 24">
+              <svg width="17" height="17" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
@@ -640,9 +480,7 @@
               <label for="reg_fullName">Magaca Buuxa</label>
               <div class="input-wrap has-icon">
                 <span class="input-icon">👤</span>
-                <input type="text" id="reg_fullName"
-                  placeholder="Magacaaga oo buuxa"
-                  autocomplete="name">
+                <input type="text" id="reg_fullName" placeholder="Magacaaga oo buuxa" autocomplete="name">
               </div>
               <span class="error-msg" id="reg_fullName_err"></span>
             </div>
@@ -651,9 +489,7 @@
               <label for="reg_email">Email</label>
               <div class="input-wrap has-icon">
                 <span class="input-icon">✉️</span>
-                <input type="email" id="reg_email"
-                  placeholder="email@example.com"
-                  autocomplete="email" inputmode="email">
+                <input type="email" id="reg_email" placeholder="email@example.com" autocomplete="email" inputmode="email">
               </div>
               <span class="error-msg" id="reg_email_err"></span>
             </div>
@@ -662,9 +498,7 @@
               <label for="reg_phone">Telefoon</label>
               <div class="input-wrap has-icon">
                 <span class="input-icon">📱</span>
-                <input type="tel" id="reg_phone"
-                  placeholder="+252xxxxxxxxx"
-                  autocomplete="tel" inputmode="tel">
+                <input type="tel" id="reg_phone" placeholder="+252xxxxxxxxx" autocomplete="tel" inputmode="tel">
               </div>
               <span class="error-msg" id="reg_phone_err"></span>
             </div>
@@ -673,14 +507,10 @@
               <label for="reg_password">Password</label>
               <div class="input-wrap has-icon">
                 <span class="input-icon">🔒</span>
-                <input type="password" id="reg_password"
-                  placeholder="Ugu yaraan 8 xaraf"
-                  autocomplete="new-password">
+                <input type="password" id="reg_password" placeholder="Ugu yaraan 8 xaraf" autocomplete="new-password">
                 <button type="button" class="pw-toggle" aria-label="Password muuji/qari">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17"
-                    viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-                    <circle cx="12" cy="12" r="3"/>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
                   </svg>
                 </button>
               </div>
@@ -692,41 +522,27 @@
               <div class="btn-spinner"></div>
             </button>
 
-            <p class="auth-terms">
-              Xisaab furista waxaad ogolaanaysaa xeerarka iyo shuruucda eMatch
-            </p>
+            <p class="auth-terms">Xisaab furista waxaad ogolaanaysaa xeerarka iyo shuruucda eMatch</p>
 
           </form>
         </div>
 
       </div><!-- /.auth-card -->
 
-      <!-- Stats Row -->
+      <!-- Stats -->
       <div class="auth-stats">
-        <div class="auth-stat">
-          <div class="auth-stat-val">500+</div>
-          <div class="auth-stat-lbl">Ciyaartoy</div>
-        </div>
+        <div class="auth-stat"><div class="auth-stat-val">500+</div><div class="auth-stat-lbl">Ciyaartoy</div></div>
         <div class="auth-stat-sep"></div>
-        <div class="auth-stat">
-          <div class="auth-stat-val">24/7</div>
-          <div class="auth-stat-lbl">Live</div>
-        </div>
+        <div class="auth-stat"><div class="auth-stat-val">24/7</div><div class="auth-stat-lbl">Live</div></div>
         <div class="auth-stat-sep"></div>
-        <div class="auth-stat">
-          <div class="auth-stat-val">SOS</div>
-          <div class="auth-stat-lbl">Lacagta</div>
-        </div>
+        <div class="auth-stat"><div class="auth-stat-val">SOS</div><div class="auth-stat-lbl">Lacagta</div></div>
       </div>
 
     </div><!-- /.auth-scroll -->
   </div><!-- /#auth-page -->
 
-</div><!-- /#app -->
+</div>
 
-<!-- ═══════════════════════════════════════════════════════
-     AUTH CHECK + UI INIT — inline
-═══════════════════════════════════════════════════════ -->
 <script type="module">
   import { initializeApp }            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -743,7 +559,6 @@
 
   const fireApp  = initializeApp(firebaseConfig, 'auth-check');
   const fireAuth = getAuth(fireApp);
-
   const loadingEl = document.getElementById('loading-screen');
   const authEl    = document.getElementById('auth-page');
 
@@ -764,44 +579,29 @@
     }
   });
 
-  /* ── Floating particles ──────────────────────────── */
   function initParticles() {
-    const container = document.getElementById('particles');
-    const colors = ['rgba(0,255,136,.5)', 'rgba(0,170,255,.5)', 'rgba(168,85,247,.5)'];
+    const c = document.getElementById('particles');
+    const colors = ['rgba(0,255,136,.5)','rgba(0,170,255,.5)','rgba(168,85,247,.5)'];
     for (let i = 0; i < 12; i++) {
       const p = document.createElement('div');
       p.className = 'particle';
-      const size = 2 + Math.random() * 3;
-      p.style.cssText = `
-        width:${size}px; height:${size}px;
-        background:${colors[Math.floor(Math.random()*colors.length)]};
-        left:${Math.random()*100}%;
-        animation-duration:${8+Math.random()*14}s;
-        animation-delay:${Math.random()*8}s;
-      `;
-      container.appendChild(p);
+      const s = 2 + Math.random() * 3;
+      p.style.cssText = `width:${s}px;height:${s}px;background:${colors[i%3]};left:${Math.random()*100}%;animation-duration:${8+Math.random()*14}s;animation-delay:${Math.random()*8}s;`;
+      c.appendChild(p);
     }
   }
 
-  /* ── Tab switching with animation ───────────────── */
   function initTabs() {
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
-        // Update buttons
-        document.querySelectorAll('.tab-btn').forEach(b => {
-          b.classList.remove('active');
-          b.setAttribute('aria-selected', 'false');
-        });
-        btn.classList.add('active');
-        btn.setAttribute('aria-selected', 'true');
-        // Switch content with animation
+        document.querySelectorAll('.tab-btn').forEach(b => { b.classList.remove('active'); b.setAttribute('aria-selected','false'); });
+        btn.classList.add('active'); btn.setAttribute('aria-selected','true');
         document.querySelectorAll('.tab-content').forEach(c => {
           if (c.dataset.tab === tab) {
             c.classList.remove('hidden');
-            // Re-trigger entry animation
             c.classList.remove('tab-enter');
-            void c.offsetWidth; // force reflow
+            void c.offsetWidth;
             c.classList.add('tab-enter');
           } else {
             c.classList.add('hidden');

@@ -593,3 +593,129 @@ select{cursor:pointer}
 @media(prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
 }
+/* ── SOS Explainer Section ─────────────────────────────── */
+.sos-explainer {
+  background: var(--bg-card);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+
+.sos-explainer-head {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-md);
+  padding: var(--sp-md);
+  background: linear-gradient(135deg, rgba(0,230,118,.06), rgba(100,181,246,.06));
+}
+
+.sos-explainer-icon {
+  width: 48px; height: 48px;
+  border-radius: var(--r-md);
+  background: rgba(0,230,118,.12);
+  border: 1px solid rgba(0,230,118,.2);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; flex-shrink: 0;
+}
+
+.sos-explainer-title {
+  font-size: 15px; font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.sos-explainer-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+  letter-spacing: .3px;
+}
+
+.sos-divider {
+  height: 1px;
+  background: var(--glass-border);
+  margin: 0 var(--sp-md);
+}
+
+.sos-point {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-sm);
+  padding: var(--sp-sm) var(--sp-md);
+  border-bottom: 1px solid rgba(255,255,255,.03);
+  transition: background var(--dur-fast) var(--ease);
+}
+.sos-point:last-of-type { border-bottom: none; }
+
+.sos-point-icon {
+  width: 36px; height: 36px;
+  border-radius: var(--r-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 17px; flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.sos-point-body { flex: 1; min-width: 0; }
+
+.sos-point-title {
+  font-size: 13px; font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.sos-point-desc {
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.sos-point-desc strong {
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.sos-min-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: var(--sp-sm) var(--sp-md) var(--sp-md);
+}
+
+.sos-min-pill {
+  font-size: 11px; font-weight: 700;
+  padding: 5px 12px;
+  border-radius: var(--r-full);
+  background: rgba(0,230,118,.08);
+  border: 1px solid rgba(0,230,118,.2);
+  color: var(--accent-green);
+  letter-spacing: .2px;
+}
+
+/* ── Role pill buttons (user detail modal) ─────────────── */
+.role-pill-row {
+  display: flex; flex-wrap: wrap; gap: 8px;
+}
+.role-btn-pill {
+  flex: 1; min-width: 80px;
+  padding: 9px 12px;
+  border-radius: var(--r-full);
+  font-size: 12px; font-weight: 700;
+  background: var(--bg-card2);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease);
+  text-align: center;
+}
+.role-btn-pill:active { opacity: .75; }
+.role-btn-pill.active {
+  background: rgba(168,85,247,.18);
+  border-color: rgba(168,85,247,.45);
+  color: var(--admin-purple);
+}
+
+/* ── Agent role tag ─────────────────────────────────────── */
+.role-agent {
+  background: rgba(0,230,118,.10);
+  color: #00e676;
+  border: 1px solid rgba(0,230,118,.25);
+}

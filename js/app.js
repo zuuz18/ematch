@@ -209,6 +209,14 @@ async function loadUserData(uid) {
     window._ematch_uid      = uid;
     window._ematch_userdata = currentUserData;
     updateHeaderUI();
+    if (window._navUpdate) window._navUpdate(currentUserData);
+
+    // ── Patch lastSeen (always) + createdAt (if missing) ──
+    try {
+      const patch = { lastSeen: serverTimestamp() };
+      if (!currentUserData.createdAt) patch.createdAt = serverTimestamp();
+      await updateDoc(doc(db, 'users', uid), patch);
+    } catch(_) {}
     try {
       localStorage.setItem('ematch_user_cache', JSON.stringify({
         ...currentUserData,
@@ -230,21 +238,24 @@ async function loadUserData(uid) {
 // ── 9. UPDATE HEADER UI ────────────────────────────────────
 function updateHeaderUI() {
   if (!currentUserData) return;
-  const coins    = currentUserData.sosBalance || 0;
-  const initials = (currentUserData.fullName || 'U')
-    .split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-  document.querySelectorAll('.avatar').forEach(a => { a.textContent = initials; });
-  if (window._updateSosChip) {
-    window._updateSosChip(coins);
+
+  // Delegate balance + initials to nav.js (single source of truth)
+  if (window._navUpdate) {
+    window._navUpdate(currentUserData);
   } else {
-    document.querySelectorAll('.sos-balance-display')
-      .forEach(c => { c.textContent = window.sosFormat ? window.sosFormat(coins) : coins.toLocaleString(); });
+    const coins = currentUserData.sosBalance || 0;
+    const fmt   = window.sosFormat ? window.sosFormat(coins) : coins.toLocaleString();
+    document.querySelectorAll(".sos-balance-display").forEach(el => { el.textContent = fmt + " SOS"; });
+    const initials = (currentUserData.fullName || "U").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
+    document.querySelectorAll(".avatar").forEach(a => { a.textContent = initials; });
   }
-  const adminRoles = ['administrator', 'owner', 'partner_manager'];
+
+  // Admin visibility
+  const adminRoles = ["administrator", "owner", "partner_manager"];
   if (adminRoles.includes(currentUserData.role)) {
-    document.querySelectorAll('.admin-only').forEach(el => el.classList.remove('hidden'));
-    const adminPanel = document.getElementById('admin-panel');
-    if (adminPanel) adminPanel.classList.remove('hidden');
+    document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("hidden"));
+    const adminPanel = document.getElementById("admin-panel");
+    if (adminPanel) adminPanel.classList.remove("hidden");
   }
 }
 
@@ -299,6 +310,7 @@ async function handleLogin(e) {
   setLoading(btn, true);
   try {
     await signInWithEmailAndPassword(auth, email, password);
+    window.location.replace('dashboard.html');
   } catch (err) {
     setLoading(btn, false);
     const badCreds = ['auth/invalid-credential','auth/user-not-found','auth/wrong-password','auth/invalid-email'];
@@ -1077,10 +1089,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   // INDEX.HTML — Login / Register
   // ════════════════════════════════════════════════════════
   if (page === 'index.html' || page === '') {
-    // If user is already logged in → go to dashboard (authGuard returns null when redirecting)
+    // authGuard(false) → if user logged in, redirects to dashboard and returns user obj
+    // if no user, returns null and we show login page
     const user = await authGuard(false, 'dashboard.html');
-    if (user) return; // Logged in — redirect already triggered, stop here
-    // No user — show login page normally
+    if (user) return; // redirect already fired — stop all execution
+    // ── No user logged in — wire up login page ──
     initPasswordToggles();
     document.getElementById('login-form')    ?.addEventListener('submit', handleLogin);
     document.getElementById('register-form') ?.addEventListener('submit', handleSignup);
@@ -1095,7 +1108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.querySelectorAll('.tab-content').forEach(c => { c.classList.toggle('hidden', c.dataset.tab !== tab); });
       });
     });
-    return; // Stop here — don't run other page blocks
+    return;
   }
 
   // ════════════════════════════════════════════════════════

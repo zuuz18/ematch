@@ -1,385 +1,15 @@
 // ============================================================
-// eMatch — js/admin.js
-// Self-contained: CSS + HTML + Logic — no admin.html needed
+// eMatch — js/admin.js  (v3 — clean, no duplicates)
 // ============================================================
 
 (async function () {
 
-  // ── Only run on admin.html ─────────────────────────────
   const page = window.location.pathname.split('/').pop() || '';
   if (page !== 'admin.html') return;
 
-  // ── Inject CSS ────────────────────────────────────────
-  const style = document.createElement('style');
-  style.textContent = `
-    :root {
-      --admin-gold:   #ffd700;
-      --admin-red:    #ef4444;
-      --admin-green:  #00e676;
-      --admin-blue:   #3b82f6;
-      --admin-purple: #a855f7;
-    }
-    .admin-hero {
-      background: linear-gradient(135deg, #0d1117 0%, #1a0a2e 60%, #0d1a2e 100%);
-      padding: var(--sp-xl) var(--sp-md) var(--sp-md);
-      position: relative; overflow: hidden;
-      border-bottom: 1px solid var(--glass-border);
-    }
-    .admin-hero::before {
-      content: ''; position: absolute; inset: 0;
-      background:
-        radial-gradient(circle at 10% 50%, rgba(168,85,247,.12) 0%, transparent 55%),
-        radial-gradient(circle at 90% 30%, rgba(59,130,246,.10) 0%, transparent 55%);
-      pointer-events: none;
-    }
-    .admin-hero-inner {
-      position: relative; z-index: 1;
-      display: flex; align-items: center; gap: var(--sp-md);
-    }
-    .admin-shield {
-      width: 52px; height: 52px; border-radius: var(--r-md);
-      background: linear-gradient(135deg, rgba(168,85,247,.3), rgba(59,130,246,.3));
-      border: 1px solid rgba(168,85,247,.4);
-      display: flex; align-items: center; justify-content: center;
-      font-size: 24px; flex-shrink: 0;
-      box-shadow: 0 0 24px rgba(168,85,247,.2);
-    }
-    .admin-hero h1 {
-      font-size: 20px; font-weight: 900;
-      background: linear-gradient(135deg, #a855f7, #3b82f6);
-      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      margin-bottom: 2px;
-    }
-    .admin-hero p { font-size: 12px; color: var(--text-muted); margin: 0; }
-    .admin-tabs {
-      display: flex; background: var(--bg-card);
-      border-bottom: 1px solid var(--glass-border);
-      position: sticky; top: 56px; z-index: 80;
-      overflow-x: auto; scrollbar-width: none;
-    }
-    .admin-tabs::-webkit-scrollbar { display: none; }
-    .admin-tab {
-      flex: 1; min-width: 70px; padding: 12px 8px;
-      font-size: 11px; font-weight: 700; color: var(--text-muted);
-      text-align: center; cursor: pointer;
-      border-bottom: 2px solid transparent;
-      transition: all var(--dur-fast) var(--ease);
-      white-space: nowrap; user-select: none;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .admin-tab.active { color: var(--admin-purple); border-bottom-color: var(--admin-purple); }
-    .admin-tab .tab-icon { font-size: 16px; display: block; margin-bottom: 2px; }
-    .admin-tab .tab-badge {
-      display: inline-flex; align-items: center; justify-content: center;
-      background: var(--admin-red); color: #fff;
-      font-size: 9px; font-weight: 800;
-      min-width: 16px; height: 16px; border-radius: var(--r-full);
-      padding: 0 4px; margin-left: 3px; vertical-align: middle;
-    }
-    .admin-panel { display: none; }
-    .admin-panel.active { display: block; }
-    .stats-grid {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: var(--sp-sm); padding: var(--sp-md);
-    }
-    .stat-card {
-      background: var(--bg-card); border: 1px solid var(--glass-border);
-      border-radius: var(--r-md); padding: var(--sp-md);
-      position: relative; overflow: hidden;
-      animation: statIn .4s var(--ease) both;
-    }
-    .stat-card:nth-child(1){animation-delay:.05s}
-    .stat-card:nth-child(2){animation-delay:.10s}
-    .stat-card:nth-child(3){animation-delay:.15s}
-    .stat-card:nth-child(4){animation-delay:.20s}
-    .stat-card:nth-child(5){animation-delay:.25s}
-    .stat-card:nth-child(6){animation-delay:.30s}
-    @keyframes statIn {
-      from { opacity:0; transform:translateY(12px); }
-      to   { opacity:1; transform:translateY(0); }
-    }
-    .stat-card::before {
-      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    }
-    .stat-card.gold::before   { background: linear-gradient(90deg,var(--admin-gold),transparent); }
-    .stat-card.green::before  { background: linear-gradient(90deg,var(--admin-green),transparent); }
-    .stat-card.blue::before   { background: linear-gradient(90deg,var(--admin-blue),transparent); }
-    .stat-card.red::before    { background: linear-gradient(90deg,var(--admin-red),transparent); }
-    .stat-card.purple::before { background: linear-gradient(90deg,var(--admin-purple),transparent); }
-    .stat-icon  { font-size: 22px; margin-bottom: var(--sp-sm); display: block; }
-    .stat-value { font-size: 24px; font-weight: 900; line-height: 1; margin-bottom: 4px; }
-    .stat-label { font-size: 11px; color: var(--text-muted); }
-    .section-hdr {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: var(--sp-md) var(--sp-md) var(--sp-sm);
-    }
-    .section-hdr h2 { font-size: 14px; font-weight: 800; }
-    .section-hdr .count-badge {
-      font-size: 11px; font-weight: 700; background: var(--bg-card2);
-      border: 1px solid var(--border); padding: 2px 8px;
-      border-radius: var(--r-full); color: var(--text-muted);
-    }
-    .refresh-btn {
-      background: none; border: none; color: var(--text-muted);
-      cursor: pointer; padding: 4px; border-radius: var(--r-sm);
-    }
-    .refresh-btn:active { color: var(--admin-purple); }
-    .admin-filter-row {
-      display: flex; gap: var(--sp-sm); padding: 0 var(--sp-md) var(--sp-sm);
-      overflow-x: auto; scrollbar-width: none;
-    }
-    .admin-filter-row::-webkit-scrollbar { display: none; }
-    .admin-chip {
-      flex-shrink: 0; font-size: 11px; font-weight: 700;
-      padding: 5px 12px; border-radius: var(--r-full);
-      background: var(--bg-card2); border: 1px solid var(--border);
-      color: var(--text-muted); cursor: pointer;
-      transition: all var(--dur-fast) var(--ease);
-    }
-    .admin-chip.active {
-      background: rgba(168,85,247,.15);
-      border-color: rgba(168,85,247,.4);
-      color: var(--admin-purple);
-    }
-    .dep-card {
-      margin: 0 var(--sp-md) var(--sp-sm); background: var(--bg-card);
-      border: 1px solid var(--glass-border); border-radius: var(--r-md);
-      overflow: hidden; animation: statIn .3s var(--ease) both;
-    }
-    .dep-card-head {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: var(--sp-sm) var(--sp-md);
-      background: rgba(255,255,255,.02); border-bottom: 1px solid var(--glass-border);
-    }
-    .dep-card-coins { font-size: 18px; font-weight: 900; color: var(--admin-gold); }
-    .dep-card-body  { padding: var(--sp-sm) var(--sp-md); }
-    .dep-card-row {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 12px; color: var(--text-secondary); margin-bottom: 6px;
-    }
-    .dep-ussd {
-      font-family: monospace; font-size: 11px;
-      background: var(--bg-card2); border: 1px solid var(--border);
-      border-radius: var(--r-sm); padding: 6px 10px;
-      color: var(--admin-green); word-break: break-all; margin: var(--sp-sm) 0;
-    }
-    .dep-actions {
-      display: grid; grid-template-columns: 1fr 1fr;
-      gap: var(--sp-sm); padding: var(--sp-sm) var(--sp-md) var(--sp-md);
-    }
-    .match-admin-card {
-      margin: 0 var(--sp-md) var(--sp-sm); background: var(--bg-card);
-      border: 1px solid var(--glass-border); border-radius: var(--r-md);
-      overflow: hidden; animation: statIn .3s var(--ease) both;
-    }
-    .match-admin-head {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: var(--sp-sm) var(--sp-md); border-bottom: 1px solid var(--glass-border);
-      background: rgba(255,255,255,.02);
-    }
-    .match-admin-title { font-size: 13px; font-weight: 700; }
-    .match-admin-body  { padding: var(--sp-sm) var(--sp-md); }
-    .match-admin-prize {
-      display: flex; align-items: center; justify-content: space-between;
-      font-size: 12px; color: var(--text-secondary); margin-bottom: var(--sp-sm);
-    }
-    .match-admin-prize span:last-child { font-weight: 800; color: var(--admin-gold); }
-    .vs-row {
-      display: flex; align-items: center; justify-content: space-between;
-      gap: var(--sp-sm); margin-bottom: var(--sp-sm);
-    }
-    .vs-player {
-      flex: 1; background: var(--bg-card2); border: 1px solid var(--border);
-      border-radius: var(--r-sm); padding: var(--sp-sm); text-align: center;
-      cursor: pointer; transition: all var(--dur-fast) var(--ease);
-    }
-    .vs-player:active { opacity: .7; }
-    .vs-player.selected { border-color: var(--admin-gold); background: rgba(255,215,0,.08); }
-    .vs-player-avatar {
-      width: 36px; height: 36px; border-radius: 50%;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 14px; font-weight: 900; color: #000; margin: 0 auto 6px;
-    }
-    .vs-player-uid { font-size: 10px; color: var(--text-muted); }
-    .vs-label { font-size: 13px; font-weight: 900; color: var(--text-muted); }
-    .user-card {
-      margin: 0 var(--sp-md) var(--sp-sm); background: var(--bg-card);
-      border: 1px solid var(--glass-border); border-radius: var(--r-md);
-      padding: var(--sp-md); display: flex; align-items: center;
-      gap: var(--sp-md); animation: statIn .3s var(--ease) both;
-      cursor: pointer; -webkit-tap-highlight-color: transparent;
-    }
-    .user-card:active { opacity: .8; }
-    .user-avatar-lg {
-      width: 44px; height: 44px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--admin-purple), var(--admin-blue));
-      display: flex; align-items: center; justify-content: center;
-      font-size: 16px; font-weight: 900; color: #fff; flex-shrink: 0;
-    }
-    .user-info { flex: 1; min-width: 0; }
-    .user-name  { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .user-email { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .user-meta  { display: flex; gap: 6px; margin-top: 4px; }
-    .user-coins-tag {
-      font-size: 10px; font-weight: 700;
-      background: rgba(255,215,0,.1); border: 1px solid rgba(255,215,0,.2);
-      color: var(--admin-gold); padding: 1px 6px; border-radius: var(--r-full);
-    }
-    .user-role-tag  { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: var(--r-full); }
-    .role-owner         { background:rgba(168,85,247,.12); color:var(--admin-purple); border:1px solid rgba(168,85,247,.25); }
-    .role-administrator { background:rgba(59,130,246,.12);  color:var(--admin-blue);   border:1px solid rgba(59,130,246,.25); }
-    .role-user          { background:rgba(255,255,255,.05); color:var(--text-muted);   border:1px solid var(--border); }
-    .admin-search { margin: var(--sp-md) var(--sp-md) var(--sp-sm); position: relative; }
-    .admin-search input {
-      width: 100%; background: var(--bg-card); border: 1px solid var(--glass-border);
-      border-radius: var(--r-md); padding: 10px 14px 10px 38px;
-      font-size: 13px; color: var(--text-primary); font-family: inherit;
-    }
-    .admin-search-icon {
-      position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-      color: var(--text-muted); font-size: 15px; pointer-events: none;
-    }
-    .admin-empty { text-align: center; padding: 40px var(--sp-md); color: var(--text-muted); }
-    .admin-empty .icon { font-size: 40px; margin-bottom: 12px; }
-    .admin-empty p { font-size: 13px; }
-    .user-detail-row {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: var(--sp-sm) 0; border-bottom: 1px solid var(--glass-border); font-size: 13px;
-    }
-    .user-detail-row:last-child { border-bottom: none; }
-    .user-detail-label { color: var(--text-muted); }
-    .user-detail-value { font-weight: 600; }
-    @keyframes livePulse {
-      0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.4); }
-      50%      { box-shadow: 0 0 0 6px rgba(239,68,68,0); }
-    }
-    .live-dot {
-      width: 8px; height: 8px; border-radius: 50%; background: var(--admin-red);
-      animation: livePulse 1.5s ease-in-out infinite;
-      display: inline-block; margin-right: 4px;
-    }
-    .back-btn {
-      display: flex; align-items: center; gap: 6px;
-      background: none; border: none; color: var(--text-secondary);
-      font-size: 14px; font-weight: 600; cursor: pointer; padding: 0;
-      font-family: inherit;
-    }
-    .back-btn:active { opacity: .7; }
-  `;
-  document.head.appendChild(style);
-  document.title = 'eMatch — Admin';
+  await new Promise(r => setTimeout(r, 100));
+  if (!window._ematch_uid && !localStorage.getItem('ematch_user_cache')) return;
 
-  // ── Build HTML ────────────────────────────────────────
-  const app = document.getElementById('app') || document.body;
-  app.innerHTML = `
-    <div id="offline-banner" class="offline-banner hidden" role="alert">
-      📵 Internetka kuma xidna
-    </div>
-    <header class="top-header">
-      <button class="back-btn" onclick="history.back()">
-        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20"
-          viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>Dib
-      </button>
-      <div style="font-size:15px;font-weight:800">🛡️ Admin</div>
-      <div class="coin-chip" onclick="window.location.href='wallet.html'" role="button" tabindex="0">
-         <span class="sos-balance-display">—</span>
-      </div>
-    </header>
-
-    <main class="page-content" role="main">
-      <div class="admin-hero">
-        <div class="admin-hero-inner">
-          <div class="admin-shield">🛡️</div>
-          <div>
-            <h1>Admin Dashboard</h1>
-            <p id="admin-uid-display">Xisaabta admin-ka</p>
-          </div>
-        </div>
-      </div>
-
-      <div class="admin-tabs">
-        <div class="admin-tab active" data-tab="stats"    onclick="switchTab('stats')"><span class="tab-icon">📊</span>Stats</div>
-        <div class="admin-tab"        data-tab="deposits" onclick="switchTab('deposits')"><span class="tab-icon">💰</span>Deposits<span class="tab-badge" id="dep-badge" style="display:none">0</span></div>
-        <div class="admin-tab"        data-tab="matches"  onclick="switchTab('matches')"><span class="tab-icon">🎮</span>Matches</div>
-        <div class="admin-tab"        data-tab="users"    onclick="switchTab('users')"><span class="tab-icon">👥</span>Users</div>
-      </div>
-
-      <!-- STATS -->
-      <div class="admin-panel active" id="panel-stats">
-        <div class="stats-grid">
-          <div class="stat-card gold"><span class="stat-icon"></span><div class="stat-value" id="s-total-coins">—</div><div class="stat-label">SOS Oo Dhan</div></div>
-          <div class="stat-card blue"><span class="stat-icon">👥</span><div class="stat-value" id="s-total-users">—</div><div class="stat-label">Isticmaalayaasha</div></div>
-          <div class="stat-card green"><span class="stat-icon">🎮</span><div class="stat-value" id="s-total-matches">—</div><div class="stat-label">Matches Oo Dhan</div></div>
-          <div class="stat-card red"><span class="stat-icon">🔴</span><div class="stat-value" id="s-live-matches">—</div><div class="stat-label">Live Hadda</div></div>
-          <div class="stat-card purple"><span class="stat-icon">💰</span><div class="stat-value" id="s-pending-deps">—</div><div class="stat-label">Deposits Sugaya</div></div>
-          <div class="stat-card gold"><span class="stat-icon">🏆</span><div class="stat-value" id="s-total-wins">—</div><div class="stat-label">Guulaha Oo Dhan</div></div>
-        </div>
-        <div class="section-hdr">
-          <h2>⚡ Dhaqdhaqaaqa Dambe</h2>
-          <button class="refresh-btn" onclick="loadStats()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/>
-            </svg>
-          </button>
-        </div>
-        <div id="recent-activity" style="padding:0 var(--sp-md) var(--sp-xl)">
-          <div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div>
-        </div>
-      </div>
-
-      <!-- DEPOSITS -->
-      <div class="admin-panel" id="panel-deposits">
-        <div class="admin-filter-row">
-          <div class="admin-chip active" data-depfilter="pending"  onclick="setDepFilter('pending')">⏳ Sugaya</div>
-          <div class="admin-chip"        data-depfilter="approved" onclick="setDepFilter('approved')">✅ La Ogolaaday</div>
-          <div class="admin-chip"        data-depfilter="rejected" onclick="setDepFilter('rejected')">❌ La Diidey</div>
-        </div>
-        <div class="section-hdr"><h2>💰 Deposit Requests</h2><span class="count-badge" id="dep-count">0</span></div>
-        <div id="deposits-list"><div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div></div>
-        <div style="height:var(--sp-xl)"></div>
-      </div>
-
-      <!-- MATCHES -->
-      <div class="admin-panel" id="panel-matches">
-        <div class="admin-filter-row">
-          <div class="admin-chip active" data-matchfilter="locked"  onclick="setMatchFilter('locked')"><span class="live-dot"></span>Live</div>
-          <div class="admin-chip"        data-matchfilter="open"    onclick="setMatchFilter('open')">⏳ Furan</div>
-          <div class="admin-chip"        data-matchfilter="dispute" onclick="setMatchFilter('dispute')">⚠️ Dispute</div>
-          <div class="admin-chip"        data-matchfilter="done"    onclick="setMatchFilter('done')">✅ Dhammaaday</div>
-        </div>
-        <div class="section-hdr"><h2>🎮 Matches</h2><span class="count-badge" id="match-count">0</span></div>
-        <div id="matches-admin-list"><div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div></div>
-        <div style="height:var(--sp-xl)"></div>
-      </div>
-
-      <!-- USERS -->
-      <div class="admin-panel" id="panel-users">
-        <div class="admin-search">
-          <span class="admin-search-icon">🔍</span>
-          <input type="text" id="user-search" placeholder="Magac ama email ka raadi..." oninput="filterUsers(this.value)">
-        </div>
-        <div class="section-hdr"><h2>👥 Isticmaalayaasha</h2><span class="count-badge" id="user-count">0</span></div>
-        <div id="users-list"><div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div></div>
-        <div style="height:var(--sp-xl)"></div>
-      </div>
-    </main>
-
-    <!-- User Modal -->
-    <div class="modal-overlay" id="user-modal">
-      <div class="modal-sheet">
-        <div class="modal-handle"></div>
-        <div id="user-modal-content"><div class="skeleton sk-block mb-md"></div></div>
-      </div>
-    </div>
-  `;
-
-  document.querySelectorAll('.modal-overlay').forEach(o =>
-    o.addEventListener('click', e => { if (e.target === o && window.closeModal) closeModal(o.id); })
-  );
-
-  // ── Wait for app.js ────────────────────────────────────
   function waitFor(fn, ms=50, tries=60) {
     return new Promise((res,rej) => {
       let t=0;
@@ -394,32 +24,53 @@
   catch { console.error('admin.js: app.js init timeout'); return; }
 
   const {
-    collection, query, where, limit,
-    getDocs, doc, getDoc, updateDoc, runTransaction, serverTimestamp
+    collection, query, where, limit, orderBy,
+    getDocs, doc, getDoc, updateDoc, addDoc,
+    runTransaction, serverTimestamp, onSnapshot
   } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
 
   const db  = window._ematch_db;
   const uid = window._ematch_uid;
+  const $   = id => document.getElementById(id);
 
-  const uidEl = document.getElementById('admin-uid-display');
+  const uidEl = $('admin-uid-display');
   if (uidEl) uidEl.textContent = 'UID: ' + uid.slice(0,16) + '...';
 
-  let allUsers    = [];
+  // ── My role ─────────────────────────────────────────────
+  let myRole = 'administrator';
+  try {
+    const snap = await getDoc(doc(db,'users',uid));
+    if (snap.exists()) myRole = snap.data().role || 'administrator';
+  } catch(e) {}
+
+  const ADMIN_ROLES = ['owner','administrator','partner_manager','support','agent'];
+
+  // Show Users tab & panel for all admin roles
+  document.querySelectorAll('.owner-only').forEach(el => {
+    el.style.display = ADMIN_ROLES.includes(myRole) ? '' : 'none';
+  });
+
+  // ── Shared helpers ──────────────────────────────────────
   let depFilter   = 'pending';
   let matchFilter = 'locked';
 
-  const $ = id => document.getElementById(id);
-
-  // Client-side sort helper
   function sortByDate(arr, field='createdAt', desc=true) {
     return arr.sort((a,b) => {
-      const aT = a[field]?.toMillis?.() || a[field]?.seconds || 0;
-      const bT = b[field]?.toMillis?.() || b[field]?.seconds || 0;
+      const aT = a[field]?.toMillis?.() || (a[field]?.seconds||0)*1000;
+      const bT = b[field]?.toMillis?.() || (b[field]?.seconds||0)*1000;
       return desc ? bT-aT : aT-bT;
     });
   }
 
-  // ── Tab Switch ─────────────────────────────────────────
+  function empty(icon, msg) {
+    return `<div class="admin-empty"><div class="icon">${icon}</div><p>${msg}</p></div>`;
+  }
+
+  function toast(msg, type) {
+    if (window.showToast) showToast(msg, type);
+  }
+
+  // ── Tab switch ──────────────────────────────────────────
   window.switchTab = function(tab) {
     document.querySelectorAll('.admin-tab').forEach(t =>
       t.classList.toggle('active', t.dataset.tab===tab));
@@ -428,9 +79,9 @@
     ({stats:loadStats, deposits:loadDeposits, matches:loadAdminMatches, users:loadUsers})[tab]?.();
   };
 
-  // ════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════
   // STATS
-  // ════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════
   window.loadStats = async function() {
     try {
       const [usersSnap, matchesSnap, depSnap, txSnap] = await Promise.all([
@@ -439,28 +90,22 @@
         getDocs(query(collection(db,'deposit_requests'), where('status','==','pending'), limit(100))),
         getDocs(query(collection(db,'transactions'), where('type','==','match_win'), limit(200)))
       ]);
-
-      const totalCoins  = usersSnap.docs.map(d=>d.data()).reduce((s,u)=>s+(u.sosBalance||0)+(u.escrowSOS||0),0);
+      const totalCoins  = usersSnap.docs.reduce((s,d)=>s+(d.data().sosBalance||0)+(d.data().escrowSOS||0),0);
       const liveMatches = matchesSnap.docs.filter(d=>d.data().status==='locked').length;
       const pending     = depSnap.size;
 
       const badge=$('dep-badge');
       if(badge){badge.textContent=pending;badge.style.display=pending>0?'inline-flex':'none';}
 
-      [['s-total-coins',totalCoins.toLocaleString()],
-       ['s-total-users',usersSnap.size],
-       ['s-total-matches',matchesSnap.size],
-       ['s-live-matches',liveMatches],
-       ['s-pending-deps',pending],
-       ['s-total-wins',txSnap.size]
+      [['s-total-coins',totalCoins.toLocaleString()],['s-total-users',usersSnap.size],
+       ['s-total-matches',matchesSnap.size],['s-live-matches',liveMatches],
+       ['s-pending-deps',pending],['s-total-wins',txSnap.size]
       ].forEach(([id,v])=>{const el=$(id);if(el)el.textContent=v;});
 
-      // Recent activity — client-side sort
       const recentSnap = await getDocs(query(collection(db,'transactions'), limit(30)));
       const actEl = $('recent-activity');
       if(!actEl) return;
       if(recentSnap.empty){actEl.innerHTML=empty('📭','Wax dhaqdhaqaaq ah ma jiro');return;}
-
       const recent = sortByDate(recentSnap.docs.map(d=>d.data())).slice(0,10);
       const icons  = {deposit_approved:'💰',escrow_lock:'🔒',match_win:'🏆',match_loss:'💸',send:'📤',receive:'📥'};
       const labels = {deposit_approved:'Deposit la ogolaaday',escrow_lock:'Match escrow',match_win:'Match guul',match_loss:'Match khasaaro',send:'Coins la diray',receive:'Coins la helay'};
@@ -469,19 +114,16 @@
         const time=t.createdAt?.toDate?t.createdAt.toDate().toLocaleTimeString('so-SO',{hour:'2-digit',minute:'2-digit'}):'—';
         return `<div class="tx-item" style="margin-bottom:var(--sp-sm)">
           <div class="tx-icon">${icons[t.type]||'💫'}</div>
-          <div class="tx-info">
-            <div class="tx-title">${labels[t.type]||t.type}</div>
-            <div class="tx-date">${(t.userId||'').slice(0,10)}... · ${time}</div>
-          </div>
+          <div class="tx-info"><div class="tx-title">${labels[t.type]||t.type}</div><div class="tx-date">${(t.userId||'').slice(0,10)}... · ${time}</div></div>
           <div class="tx-amount ${pos?'credit':'debit'}">${pos?'+':''}${(t.sos||0).toLocaleString()} </div>
         </div>`;
       }).join('');
     } catch(err){console.error('loadStats:',err);}
   };
 
-  // ════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════
   // DEPOSITS
-  // ════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════
   window.setDepFilter = function(f) {
     depFilter=f;
     document.querySelectorAll('[data-depfilter]').forEach(c=>c.classList.toggle('active',c.dataset.depfilter===f));
@@ -489,28 +131,22 @@
   };
 
   window.loadDeposits = async function() {
-    const list=$('deposits-list');
-    if(!list) return;
+    const list=$('deposits-list'); if(!list) return;
     list.innerHTML=empty('⏳','La soo qaadayaa...');
     try {
-      const snap = await getDocs(query(collection(db,'deposit_requests'),
-        where('status','==',depFilter), limit(50)));
-
-      const docs = sortByDate(snap.docs.map(d=>({id:d.id,...d.data()})));
+      const snap=await getDocs(query(collection(db,'deposit_requests'),where('status','==',depFilter),limit(50)));
+      const docs=sortByDate(snap.docs.map(d=>({id:d.id,...d.data()})));
       const c=$('dep-count'); if(c) c.textContent=docs.length;
-
       if(depFilter==='pending'){
-        const b=$('dep-badge');
-        if(b){b.textContent=docs.length;b.style.display=docs.length>0?'inline-flex':'none';}
+        const b=$('dep-badge'); if(b){b.textContent=docs.length;b.style.display=docs.length>0?'inline-flex':'none';}
         const s=$('s-pending-deps'); if(s) s.textContent=docs.length;
       }
       if(!docs.length){list.innerHTML=empty(depFilter==='pending'?'✅':'📭',depFilter==='pending'?'Pending deposit ma jiro':'Wax la ma helin');return;}
-
       list.innerHTML=docs.map(r=>{
         const time=r.createdAt?.toDate?r.createdAt.toDate().toLocaleString('so-SO'):'—';
         return `<div class="dep-card">
           <div class="dep-card-head">
-            <span class="dep-card-coins">${"SOS"} ${(r.sosAmount||0).toLocaleString()}</span>
+            <span class="dep-card-coins"> ${(r.sosAmount||0).toLocaleString()}</span>
             <span class="status-pill ${r.status==='pending'?'open':r.status==='approved'?'done':'cancelled'}">
               ${r.status==='pending'?'⏳ Sugaya':r.status==='approved'?'✅ Ogol':'❌ Diid'}
             </span>
@@ -523,7 +159,7 @@
           </div>
           ${r.status==='pending'?`<div class="dep-actions">
             <button class="btn btn-primary btn-sm" onclick="approveDeposit('${r.id}','${r.userId}',${r.sosAmount})">✅ Ogolow</button>
-            <button class="btn btn-danger  btn-sm" onclick="rejectDeposit('${r.id}')">❌ Diid</button>
+            <button class="btn btn-danger btn-sm" onclick="rejectDeposit('${r.id}')">❌ Diid</button>
           </div>`:''}
         </div>`;
       }).join('');
@@ -531,7 +167,7 @@
   };
 
   window.approveDeposit = async function(reqId,userId,sosAmount) {
-    if(!confirm(`✅ Deposit ogolaan?\n ${sosAmount.toLocaleString()} coins`)) return;
+    if(!confirm(`✅ Deposit ogolaan?\n ${sosAmount.toLocaleString()} SOS`)) return;
     try {
       await runTransaction(db, async tx=>{
         const rRef=doc(db,'deposit_requests',reqId), uRef=doc(db,'users',userId);
@@ -556,9 +192,9 @@
     } catch(err){toast('Khalad: '+err.message,'error');}
   };
 
-  // ════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════
   // MATCHES
-  // ════════════════════════════════════════════════════════
+  // ══════════════════════════════════════════════════════════
   window.setMatchFilter = function(f) {
     matchFilter=f;
     document.querySelectorAll('[data-matchfilter]').forEach(c=>c.classList.toggle('active',c.dataset.matchfilter===f));
@@ -566,17 +202,13 @@
   };
 
   window.loadAdminMatches = async function() {
-    const list=$('matches-admin-list');
-    if(!list) return;
+    const list=$('matches-admin-list'); if(!list) return;
     list.innerHTML=empty('⏳','La soo qaadayaa...');
     try {
-      const snap = await getDocs(query(collection(db,'matches'),
-        where('status','==',matchFilter), limit(50)));
-
-      const docs = sortByDate(snap.docs.map(d=>({id:d.id,...d.data()})));
+      const snap=await getDocs(query(collection(db,'matches'),where('status','==',matchFilter),limit(50)));
+      const docs=sortByDate(snap.docs.map(d=>({id:d.id,...d.data()})));
       const c=$('match-count'); if(c) c.textContent=docs.length;
       if(!docs.length){list.innerHTML=empty('🎮','Match la ma helin');return;}
-
       const em={'FIFA':'⚽','FC Mobile':'⚽','eFootball':'⚽','NBA 2K':'🏀','PUBG':'🔫','Free Fire':'🔫','COD':'🔫'};
       list.innerHTML=docs.map(m=>{
         const emoji=em[m.platform]||'🎮';
@@ -588,11 +220,13 @@
             <span class="status-pill ${m.status}">${isLive?'🔴 LIVE':isDone?'✅ Done':isDispute?'⚠️ Dispute':'⏳ Furan'}</span>
           </div>
           <div class="match-admin-body">
-            <div class="match-admin-prize"><span>🏆 Prize Pool</span><span>${"SOS"} ${((m.stakeAmount||0)*2).toLocaleString()}</span></div>
+            <div class="match-admin-prize"><span>🏆 Prize Pool</span><span> ${((m.stakeAmount||0)*2).toLocaleString()}</span></div>
             <div class="match-admin-prize"><span>📅 Taariikhda</span><span style="color:var(--text-muted)">${time}</span></div>
-
-            ${isLive&&m.createdBy&&m.joinedBy?`
-              <div style="margin-bottom:var(--sp-sm);font-size:12px;color:var(--text-muted);font-weight:700">🏆 Winner Dooro:</div>
+            ${(isLive||isDispute)&&m.createdBy&&m.joinedBy?`
+              ${isDispute?`<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--r-sm);padding:var(--sp-sm);margin-bottom:var(--sp-sm)">
+                <div style="font-size:12px;font-weight:700;color:#ef4444;margin-bottom:4px">⚠️ Khilaaf — Admin go'aan qaado</div>
+                <div style="font-size:11px;color:var(--text-muted)">P1: ${m.createdByUsername||m.createdBy.slice(0,8)+'...'} | P2: ${m.joinedByUsername||m.joinedBy.slice(0,8)+'...'}</div>
+              </div>`:'<div style="font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:var(--sp-sm)">🏆 Winner Dooro:</div>'}
               <div class="vs-row">
                 <div class="vs-player" onclick="selectWinner('${m.id}','${m.createdBy}',this)">
                   <div class="vs-player-avatar" style="background:linear-gradient(135deg,var(--admin-green),var(--admin-blue))">${m.createdBy[0].toUpperCase()}</div>
@@ -606,26 +240,6 @@
                   <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Ku biirtay</div>
                 </div>
               </div>`:''}
-
-            ${isDispute?`
-              <div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--r-sm);padding:var(--sp-sm);margin-bottom:var(--sp-sm)">
-                <div style="font-size:12px;font-weight:700;color:#ef4444;margin-bottom:6px">⚠️ Khilaaf — Admin go'aan qaado</div>
-                <div style="font-size:11px;color:var(--text-muted)">P1: ${m.createdByUsername||m.createdBy?.slice(0,8)+'...'} &nbsp;|&nbsp; P2: ${m.joinedByUsername||m.joinedBy?.slice(0,8)+'...'}</div>
-              </div>
-              <div class="vs-row">
-                <div class="vs-player" onclick="selectWinner('${m.id}','${m.createdBy}',this)">
-                  <div class="vs-player-avatar" style="background:linear-gradient(135deg,var(--admin-green),var(--admin-blue))">${(m.createdBy||'?')[0].toUpperCase()}</div>
-                  <div class="vs-player-uid">${m.createdByUsername||m.createdBy?.slice(0,8)+'...'}</div>
-                  <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Abuuraha</div>
-                </div>
-                <div class="vs-label">VS</div>
-                <div class="vs-player" onclick="selectWinner('${m.id}','${m.joinedBy}',this)">
-                  <div class="vs-player-avatar" style="background:linear-gradient(135deg,var(--admin-red),#dc2626)">${(m.joinedBy||'?')[0].toUpperCase()}</div>
-                  <div class="vs-player-uid">${m.joinedByUsername||m.joinedBy?.slice(0,8)+'...'}</div>
-                  <div style="font-size:10px;color:var(--text-muted);margin-top:2px">Ku biirtay</div>
-                </div>
-              </div>`:''}
-
             ${isDone&&m.winnerId?`<div style="background:rgba(255,215,0,.08);border:1px solid rgba(255,215,0,.2);border-radius:var(--r-sm);padding:var(--sp-sm);text-align:center;font-size:12px">🏆 Winner: <strong style="color:var(--admin-gold)">${m.winnerId.slice(0,12)}...</strong></div>`:''}
             ${m.status==='open'?`<div style="background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--r-sm);padding:var(--sp-sm);text-align:center;font-size:12px;color:var(--text-muted)">⏳ Ciyaartoodaha 2-aad waa la sugayaa</div>`:''}
           </div>
@@ -660,118 +274,296 @@
     } catch(err){el.classList.remove('selected');toast('Khalad: '+err.message,'error');}
   };
 
-  // ════════════════════════════════════════════════════════
-  // USERS
-  // ════════════════════════════════════════════════════════
-  window.loadUsers = async function() {
-    const list=$('users-list');
-    if(!list) return;
-    list.innerHTML=empty('⏳','La soo qaadayaa...');
-    try {
-      const snap=await getDocs(query(collection(db,'users'),limit(50)));
-      allUsers=snap.docs.map(d=>({id:d.id,...d.data()}));
-      // Sort by sosBalance descending
-      allUsers.sort((a,b)=>(b.sosBalance||0)-(a.sosBalance||0));
-      const c=$('user-count'); if(c) c.textContent=allUsers.length;
-      renderUsers(allUsers);
-    } catch(err){list.innerHTML=empty('❌',err.message);}
-  };
+  // ══════════════════════════════════════════════════════════
+  // USERS — real-time, full management
+  // ══════════════════════════════════════════════════════════
+  let allUsers   = [];
+  let usersUnsub = null;
+  let userFilter = 'all';
+  let userSearch = '';
+
+  function isOnline(u) {
+    const ms = u.lastSeen?.toMillis?.() || ((u.lastSeen?.seconds||0)*1000);
+    return ms && (Date.now()-ms) < 3*60*1000;
+  }
+
+  function getFilteredUsers() {
+    let list = [...allUsers];
+    if (userFilter==='online')    list = list.filter(isOnline);
+    if (userFilter==='admins')    list = list.filter(u=>ADMIN_ROLES.includes(u.role));
+    if (userFilter==='highbal')   list = [...list].sort((a,b)=>(b.sosBalance||0)-(a.sosBalance||0));
+    if (userFilter==='new')       { const wk=Date.now()-7*24*3600*1000; list=list.filter(u=>((u.createdAt?.toMillis?.()|(u.createdAt?.seconds*1000)||0))>wk); }
+    if (userFilter==='suspended') list = list.filter(u=>u.role==='suspended');
+    if (userSearch) {
+      const t=userSearch;
+      list=list.filter(u=>(u.fullName||'').toLowerCase().includes(t)||(u.email||'').toLowerCase().includes(t)||(u.id||'').toLowerCase().includes(t)||(u.phone||'').includes(t));
+    }
+    if (userFilter!=='highbal') {
+      list.sort((a,b)=>{
+        const ao=isOnline(a)?1:0, bo=isOnline(b)?1:0;
+        if(ao!==bo) return bo-ao;
+        const at=a.createdAt?.toMillis?.()|(a.createdAt?.seconds*1000)||0;
+        const bt=b.createdAt?.toMillis?.()|(b.createdAt?.seconds*1000)||0;
+        return bt-at;
+      });
+    }
+    return list;
+  }
+
+  function updateUserStatsBanner() {
+    const online = allUsers.filter(isOnline).length;
+    const totSOS = allUsers.reduce((s,u)=>s+(u.sosBalance||0),0);
+    const admins = allUsers.filter(u=>ADMIN_ROLES.includes(u.role)).length;
+    [['um-total',allUsers.length],['um-online',online],
+     ['um-sos', totSOS>999999?(totSOS/1000000).toFixed(1)+'M':totSOS>999?Math.round(totSOS/1000)+'K':totSOS],
+     ['um-admins',admins],['ufc-all',allUsers.length],['ufc-online',online],['ufc-admins',admins]
+    ].forEach(([id,v])=>{const el=$(id);if(el)el.textContent=v;});
+    const ub=$('users-badge');
+    if(ub){ub.textContent=online;ub.style.display=online>0?'inline-flex':'none';}
+  }
+
+  function umTag(u) {
+    if(u.role==='owner')           return `<span class="um-tag um-tag-owner">👑 Owner</span>`;
+    if(u.role==='administrator')   return `<span class="um-tag um-tag-admin">🛡️ Admin</span>`;
+    if(u.role==='partner_manager') return `<span class="um-tag um-tag-sup">🤝 Partner</span>`;
+    if(u.role==='support')         return `<span class="um-tag um-tag-sup">🎧 Support</span>`;
+    if(u.role==='agent')           return `<span class="um-tag um-tag-sup">📋 Agent</span>`;
+    if(u.role==='suspended')       return `<span class="um-tag um-tag-sus">🚫 Suspended</span>`;
+    return `<span class="um-tag um-tag-user">👤 User</span>`;
+  }
 
   function renderUsers(users) {
-    const list=$('users-list');
-    if(!list) return;
-    if(!users.length){list.innerHTML=empty('👤','Isticmaale la ma helin');return;}
-    list.innerHTML=users.map((u,i)=>{
-      const ini=(u.fullName||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-      const rc=u.role==='owner'?'role-owner':u.role==='administrator'?'role-administrator':'role-user';
-      const rl=u.role==='owner'?'👑 Owner':u.role==='administrator'?'🛡️ Admin':u.role==='partner_manager'?'🤝 Partner':'👤 User';
-      return `<div class="user-card" onclick="openUserDetail('${u.id}')" style="animation-delay:${i*.04}s">
-        <div class="user-avatar-lg">${ini}</div>
-        <div class="user-info">
-          <div class="user-name">${u.fullName||'—'}</div>
-          <div class="user-email">${u.email||'—'}</div>
-          <div class="user-meta">
-            <span class="user-coins-tag">${"SOS"} ${(u.sosBalance||0).toLocaleString()}</span>
-            <span class="user-role-tag ${rc}">${rl}</span>
-          </div>
+    const listEl=$('users-list'); if(!listEl) return;
+    const cnt=$('user-count'); if(cnt) cnt.textContent=users.length;
+    if(!users.length){
+      listEl.innerHTML=empty(userSearch?'🔍':'👤',userSearch?'User la ma helin':'Isticmaale ma jiro');
+      return;
+    }
+    const fmt=window.sosFormat||(n=>n.toLocaleString());
+    listEl.innerHTML=users.map((u,i)=>{
+      const ini=(u.fullName||'U').split(' ').filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2);
+      const online=isOnline(u);
+      const avBg=u.role==='owner'
+        ?'linear-gradient(135deg,#ffd700,#ff6b00)'
+        :ADMIN_ROLES.includes(u.role)
+          ?'linear-gradient(135deg,var(--admin-purple),var(--admin-blue))'
+          :'linear-gradient(135deg,#374151,#1f2937)';
+      return `<div class="um-user-card" style="animation:statIn .2s var(--ease) ${Math.min(i*.03,.4)}s both" onclick="openUserDetail('${u.id}')">
+        <div class="um-avatar" style="background:${avBg}">${ini}${online?'<div class="um-online-pip"></div>':''}</div>
+        <div class="um-info">
+          <div class="um-name">${u.fullName||'—'}</div>
+          <div class="um-email">${u.email||u.phone||(u.id||'').slice(0,20)+'...'}</div>
+          <div class="um-tags">${umTag(u)}<span class="um-tag um-tag-sos">${fmt(u.sosBalance||0)} SOS</span>${online?'<span style="font-size:9px;color:var(--admin-green);font-weight:700;margin-left:2px">● online</span>':''}</div>
         </div>
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </div>`;
     }).join('');
   }
 
+  window.setUserFilter = function(f, el) {
+    userFilter=f;
+    document.querySelectorAll('[data-ufilter]').forEach(c=>c.classList.toggle('active',c===el));
+    renderUsers(getFilteredUsers());
+  };
+
   window.filterUsers = function(q) {
-    const term=q.toLowerCase().trim();
-    const f=term?allUsers.filter(u=>(u.fullName||'').toLowerCase().includes(term)||(u.email||'').toLowerCase().includes(term)||(u.uid||'').toLowerCase().includes(term)):allUsers;
-    const c=$('user-count'); if(c) c.textContent=f.length;
-    renderUsers(f);
+    userSearch=q.toLowerCase().trim();
+    const cl=$('um-clear-btn'); if(cl) cl.style.display=userSearch?'block':'none';
+    renderUsers(getFilteredUsers());
   };
 
+  window.clearUserSearch = function() {
+    const inp=$('user-search'), cl=$('um-clear-btn');
+    if(inp) inp.value=''; if(cl) cl.style.display='none';
+    userSearch=''; renderUsers(getFilteredUsers());
+  };
+
+  window.loadUsers = function() {
+    const listEl=$('users-list'); if(!listEl) return;
+    if(usersUnsub){usersUnsub();usersUnsub=null;}
+    const ri=$('um-refresh-icon');
+    if(ri){ri.style.animation='udSpin .7s linear';setTimeout(()=>ri.style.animation='',800);}
+    listEl.innerHTML=empty('⏳','La soo qaadayaa...');
+    usersUnsub=onSnapshot(
+      query(collection(db,'users'),limit(500)),
+      snap=>{
+        allUsers=snap.docs.map(d=>({id:d.id,...d.data()}));
+        updateUserStatsBanner();
+        renderUsers(getFilteredUsers());
+      },
+      err=>{ if(listEl) listEl.innerHTML=empty('❌',err.message); }
+    );
+  };
+
+  // ── User detail bottom sheet ─────────────────────────────
   window.openUserDetail = async function(userId) {
-    window.openModal('user-modal');
-    const content=$('user-modal-content');
-    content.innerHTML=`<div class="skeleton sk-block mb-md"></div><div class="skeleton sk-line"></div>`;
+    const overlay=$('ud-overlay'), body=$('ud-body');
+    if(!overlay||!body) return;
+    body.innerHTML=`<div style="padding:48px;text-align:center;color:var(--text-muted)">⏳</div>`;
+    overlay.classList.add('open');
+    document.body.style.overflow='hidden';
     try {
-      const snap=await getDoc(doc(db,'users',userId));
-      if(!snap.exists()){content.innerHTML='<p class="text-muted p-md">User la ma helin</p>';return;}
-      const u=snap.data();
-      const ini=(u.fullName||'U').split(' ').map(w=>w[0]).join('').toUpperCase().slice(0,2);
-      const rl=u.role==='owner'?'👑 Owner':u.role==='administrator'?'🛡️ Admin':'👤 User';
+      const [uSnap,txSnap]=await Promise.all([
+        getDoc(doc(db,'users',userId)),
+        getDocs(query(collection(db,'transactions'),where('userId','==',userId),orderBy('createdAt','desc'),limit(10)))
+      ]);
+      if(!uSnap.exists()){body.innerHTML='<p style="padding:var(--sp-md)">User la ma helin</p>';return;}
+      const u={id:userId,...uSnap.data()};
+      const ini=(u.fullName||'U').split(' ').filter(Boolean).map(w=>w[0]).join('').toUpperCase().slice(0,2);
+      const online=isOnline(u);
       const joined=u.createdAt?.toDate?u.createdAt.toDate().toLocaleDateString('so-SO'):'—';
-      content.innerHTML=`
-        <div class="modal-header">
-          <h2>👤 Xisaabta</h2>
-          <button class="modal-close" onclick="closeModal('user-modal')">✕</button>
-        </div>
-        <div style="text-align:center;padding:var(--sp-md) 0">
-          <div style="width:64px;height:64px;border-radius:50%;background:linear-gradient(135deg,var(--admin-purple),var(--admin-blue));display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:900;color:#fff;margin:0 auto var(--sp-sm)">${ini}</div>
-          <div style="font-size:18px;font-weight:800">${u.fullName||'—'}</div>
-          <div style="font-size:12px;color:var(--text-muted)">${rl}</div>
-        </div>
-        <div style="padding:0 var(--sp-md) var(--sp-md)">
-          <div class="user-detail-row"><span class="user-detail-label">Email</span><span class="user-detail-value" style="font-size:12px">${u.email||'—'}</span></div>
-          <div class="user-detail-row"><span class="user-detail-label">Telefon</span><span class="user-detail-value">${u.phone||'—'}</span></div>
-          <div class="user-detail-row"><span class="user-detail-label"> Coins</span><span class="user-detail-value" style="color:var(--admin-gold)">${(u.sosBalance||0).toLocaleString()}</span></div>
-          <div class="user-detail-row"><span class="user-detail-label">🔒 Escrow</span><span class="user-detail-value">${(u.escrowSOS||0).toLocaleString()}</span></div>
-          <div class="user-detail-row"><span class="user-detail-label">📅 Galay</span><span class="user-detail-value">${joined}</span></div>
-          <div class="user-detail-row"><span class="user-detail-label">UID</span><span class="user-detail-value" style="font-size:10px;font-family:monospace">${(u.uid||userId).slice(0,20)}...</span></div>
-        </div>
-        <div style="padding:0 var(--sp-md) var(--sp-md);display:flex;flex-direction:column;gap:var(--sp-sm)">
-          <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:4px">Role Bedel:</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-sm)">
-            <button class="btn btn-ghost btn-sm" onclick="setRole('${userId}','user')">👤 User</button>
-            <button class="btn btn-ghost btn-sm" onclick="setRole('${userId}','administrator')">🛡️ Admin</button>
+      const seenMs=(u.lastSeen?.toMillis?.())||((u.lastSeen?.seconds||0)*1000);
+      const lastSeen=seenMs?new Date(seenMs).toLocaleString('so-SO'):'—';
+      const wins=txSnap.docs.filter(d=>d.data().type==='match_win').length;
+      const fmt=window.sosFormat||(n=>n.toLocaleString());
+
+      const availRoles=myRole==='owner'
+        ?[['user','👤 User',''],['support','🎧 Support',''],['agent','📋 Agent',''],['partner_manager','🤝 Partner',''],['administrator','🛡️ Admin',''],['owner','👑 Owner','owner-p'],['suspended','🚫 Suspend','sus-p']]
+        :[['user','👤 User',''],['support','🎧 Support',''],['agent','📋 Agent',''],['suspended','🚫 Suspend','sus-p']];
+
+      const rolePills=availRoles.map(([r,lbl,xc])=>
+        `<button class="ud-role-pill ${xc} ${u.role===r?'cur':''}" onclick="udSetRole('${userId}','${r}','${lbl}')">${lbl}</button>`
+      ).join('');
+
+      const txIcons={deposit_approved:'💰',escrow_lock:'🔒',match_win:'🏆',match_loss:'💸',send:'📤',receive:'📥',admin_credit:'⚡',admin_debit:'🔧'};
+      const txLabels={deposit_approved:'Deposit',escrow_lock:'Escrow',match_win:'Guul',match_loss:'Khasaaro',send:'La diray',receive:'La helay',admin_credit:'Admin+',admin_debit:'Admin−'};
+      const txHtml=txSnap.docs.length
+        ?txSnap.docs.map(d=>{
+            const t=d.data(),cr=(t.sos||0)>0,dt=t.createdAt?.toDate?t.createdAt.toDate().toLocaleDateString('so-SO'):'—';
+            return `<div class="ud-tx-mini"><div class="ud-tx-icon">${txIcons[t.type]||'💫'}</div><div class="ud-tx-info"><div class="ud-tx-lbl">${txLabels[t.type]||t.type}</div><div class="ud-tx-date">${dt}</div></div><div class="ud-tx-amt ${cr?'cr':'dr'}">${cr?'+':''}${fmt(t.sos||0)}</div></div>`;
+          }).join('')
+        :`<div style="padding:14px;text-align:center;color:var(--text-muted);font-size:12px">Wax transaction ah ma jiro</div>`;
+
+      const avBg=u.role==='owner'
+        ?'background:linear-gradient(135deg,#ffd700,#ff6b00);color:#000'
+        :ADMIN_ROLES.includes(u.role)
+          ?'background:linear-gradient(135deg,var(--admin-purple),var(--admin-blue));color:#fff'
+          :'background:linear-gradient(135deg,var(--admin-green),var(--admin-blue));color:#000';
+
+      body.innerHTML=`
+        <div style="position:relative">
+          <div class="ud-cover"></div>
+          <button class="ud-close-btn" onclick="closeUserDetail()">✕</button>
+          <div class="ud-av-zone">
+            <div class="ud-av-lg" style="${avBg}">${ini}</div>
+            <div class="ud-id">
+              <div class="ud-id-name">${u.fullName||'—'}</div>
+              <div class="ud-id-email">${u.email||'—'}</div>
+            </div>
           </div>
-          <button class="btn btn-danger btn-sm mt-sm" onclick="adjustCoins('${userId}',${u.sosBalance||0})"> SOS Bedel</button>
-        </div>`;
-    } catch(err){content.innerHTML=`<p class="text-muted p-md">Khalad: ${err.message}</p>`;}
+        </div>
+        <div class="ud-stat-row">
+          <div class="ud-stat"><div class="ud-stat-v" style="color:var(--admin-green)">${fmt(u.sosBalance||0)}</div><div class="ud-stat-l"> SOS</div></div>
+          <div class="ud-stat"><div class="ud-stat-v" style="color:var(--admin-gold)">${wins}</div><div class="ud-stat-l">🏆 Guul</div></div>
+          <div class="ud-stat"><div class="ud-stat-v" style="color:var(--admin-blue)">${fmt(u.escrowSOS||0)}</div><div class="ud-stat-l">🔒 Escrow</div></div>
+        </div>
+        <div class="ud-info-block">
+          <div class="ud-ir"><span class="ud-ir-l">📞 Telefon</span><span class="ud-ir-v">${u.phone||'—'}</span></div>
+          <div class="ud-ir"><span class="ud-ir-l">📅 La Abuuray</span><span class="ud-ir-v">${joined}</span></div>
+          <div class="ud-ir"><span class="ud-ir-l">👁️ Ugu dambeyn</span><span class="ud-ir-v" style="font-size:11px">${online?'<span style="color:var(--admin-green)">● Online hadda</span>':lastSeen}</span></div>
+          <div class="ud-ir" style="cursor:pointer" onclick="udCopyUID('${userId}')">
+            <span class="ud-ir-l">🔑 UID</span>
+            <span class="ud-ir-v" style="font-family:monospace;font-size:10px;color:var(--text-muted)">${userId.slice(0,20)}… 📋</span>
+          </div>
+        </div>
+        <div class="ud-section">
+          <div class="ud-section-title">🔧 Role Bedel</div>
+          <div class="ud-role-grid">${rolePills}</div>
+        </div>
+        <div class="ud-section">
+          <div class="ud-section-title">💰 Balance Hagaaji</div>
+          <div class="ud-bal-row">
+            <input class="ud-bal-input" type="number" id="ud-bal-inp" placeholder="SOS..." min="1" inputmode="numeric">
+            <button class="ud-bal-add" onclick="udAdjustBal('${userId}',true)">+ Ku Dar</button>
+            <button class="ud-bal-sub" onclick="udAdjustBal('${userId}',false)">− Ka Jaro</button>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:5px">Hadda: <strong style="color:var(--admin-green)">${fmt(u.sosBalance||0)} SOS</strong></div>
+        </div>
+        <div class="ud-section">
+          <div class="ud-section-title">⚡ Ficilada Degdega</div>
+          <div class="ud-qa-grid">
+            <button class="ud-qa" onclick="udPwdReset('${u.email||''}')">🔑 Password Reset</button>
+            <button class="ud-qa" onclick="udCopyUID('${userId}')">📋 UID Koobiyaa</button>
+            <button class="ud-qa" onclick="window.open('https://console.firebase.google.com/project/ematch-bb818/firestore/data/users/${userId}','_blank')">🔥 Firebase Fur</button>
+            <button class="ud-qa red" onclick="udSuspend('${userId}','${(u.fullName||'User').replace(/'/g,'')}')">🚫 Suspend</button>
+          </div>
+        </div>
+        <div class="ud-section">
+          <div class="ud-section-title">📋 Transactionyada Dambe</div>
+          <div style="background:var(--bg-card2);border:1px solid var(--glass-border);border-radius:var(--r-md);overflow:hidden">${txHtml}</div>
+        </div>
+        <div style="height:env(safe-area-inset-bottom,24px)"></div>`;
+    } catch(err){
+      body.innerHTML=`<p style="padding:var(--sp-md);color:var(--admin-red)">Khalad: ${err.message}</p>`;
+    }
   };
 
-  window.setRole = async function(userId,role) {
-    if(!confirm(`Role ku bedel: ${role}?`)) return;
+  window.closeUserDetail = function() {
+    const o=$('ud-overlay'); if(o){o.classList.remove('open');document.body.style.overflow='';}
+  };
+
+  window.handleUdOverlay = function(e) {
+    if(e.target===$('ud-overlay')) closeUserDetail();
+  };
+
+  window.udSetRole = async function(userId,role,label) {
+    if(myRole!=='owner'&&(role==='administrator'||role==='owner')){toast('Awood kuma lihid role kan','error');return;}
+    if(!confirm(`Role ku bedel: ${label}?\nUser: ${userId.slice(0,16)}...`)) return;
     try {
       await updateDoc(doc(db,'users',userId),{role});
-      toast(`✅ Role: ${role}`,'success');
-      window.closeModal('user-modal'); loadUsers();
+      await addDoc(collection(db,'adminLogs'),{action:'change_role',adminUid:uid,targetUserId:userId,newRole:role,createdAt:serverTimestamp()});
+      toast(`✅ Role: ${label}`,'success');
+      const i=allUsers.findIndex(u=>u.id===userId); if(i>-1) allUsers[i].role=role;
+      renderUsers(getFilteredUsers());
+      closeUserDetail(); setTimeout(()=>openUserDetail(userId),300);
     } catch(err){toast('Khalad: '+err.message,'error');}
   };
 
-  window.adjustCoins = async function(userId,current) {
-    const input=prompt(`Coins cusub geli (hadda: ${current}):`);
-    if(input===null) return;
-    const n=parseInt(input);
-    if(isNaN(n)||n<0){toast('Tiro sax ah geli','error');return;}
-    if(!confirm(`Coins ku bedel ${n}?`)) return;
+  window.udAdjustBal = async function(userId,isAdd) {
+    const amount=parseInt($('ud-bal-inp')?.value)||0;
+    if(amount<1){toast('Qadarka geli (1+)','error');return;}
+    const label=isAdd?`+${amount.toLocaleString()} SOS ku dar`:`-${amount.toLocaleString()} SOS ka jar`;
+    if(!confirm(`💰 ${label}\nUser: ${userId.slice(0,16)}...`)) return;
     try {
-      await updateDoc(doc(db,'users',userId),{sosBalance:n});
-      toast(`✅ Coins: ${n.toLocaleString()}`,'success');
-      window.closeModal('user-modal'); loadUsers();
+      await runTransaction(db,async tx=>{
+        const uRef=doc(db,'users',userId), uSnap=await tx.get(uRef);
+        if(!uSnap.exists()) throw new Error('User la ma helin');
+        const cur=uSnap.data().sosBalance||0, newBal=isAdd?cur+amount:Math.max(0,cur-amount);
+        tx.update(uRef,{sosBalance:newBal});
+        tx.set(doc(collection(db,'transactions')),{userId,type:isAdd?'admin_credit':'admin_debit',sos:isAdd?+amount:-amount,relatedMatch:null,createdAt:serverTimestamp(),meta:{adjustedBy:uid,reason:'manual_admin'}});
+        tx.set(doc(collection(db,'adminLogs')),{action:isAdd?'credit_balance':'debit_balance',adminUid:uid,targetUserId:userId,amount,createdAt:serverTimestamp()});
+      });
+      toast(`✅ ${label}!`,'success');
+      const i=allUsers.findIndex(u=>u.id===userId);
+      if(i>-1) allUsers[i].sosBalance=isAdd?(allUsers[i].sosBalance||0)+amount:Math.max(0,(allUsers[i].sosBalance||0)-amount);
+      renderUsers(getFilteredUsers());
+      closeUserDetail(); setTimeout(()=>openUserDetail(userId),300);
     } catch(err){toast('Khalad: '+err.message,'error');}
   };
 
-  function empty(icon,msg){return `<div class="admin-empty"><div class="icon">${icon}</div><p>${msg}</p></div>`;}
-  function toast(msg,type){if(window.showToast)showToast(msg,type);}
+  window.udPwdReset = async function(email) {
+    if(!email||email==='undefined'||email==='—'){toast('Email la ma helin','error');return;}
+    try {
+      const {getAuth:ga,sendPasswordResetEmail:spr}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
+      const {getApps:gA}=await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
+      const app2=gA().find(a=>a.name==='[DEFAULT]')||gA()[0];
+      await spr(ga(app2),email);
+      toast('✅ Password reset email la diray!','success');
+    } catch(err){toast('Khalad: '+err.message,'error');}
+  };
 
+  window.udCopyUID = function(userId) {
+    navigator.clipboard.writeText(userId)
+      .then(()=>toast('✅ UID la koobiyay!','info'))
+      .catch(()=>toast('Koobiyayntu waa fashilantay','error'));
+  };
+
+  window.udSuspend = function(userId,name) {
+    if(!confirm(`🚫 User suspend garee?\n${name}`)) return;
+    udSetRole(userId,'suspended','🚫 Suspended');
+  };
+
+  // ── Init ────────────────────────────────────────────────
   loadStats();
 
 })();

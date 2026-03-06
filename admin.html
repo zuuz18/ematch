@@ -338,6 +338,11 @@
     }
     .role-owner         { background:rgba(168,85,247,.12); color:var(--admin-purple); border:1px solid rgba(168,85,247,.25); }
     .role-administrator { background:rgba(59,130,246,.12);  color:var(--admin-blue);   border:1px solid rgba(59,130,246,.25); }
+    .role-agent         { background:rgba(0,230,118,.10);   color:#00e676;             border:1px solid rgba(0,230,118,.25); }
+    .role-btn-pill { flex:1;min-width:80px;padding:9px 12px;border-radius:99px;font-size:12px;font-weight:700;background:var(--bg-card2);border:1px solid var(--border);color:var(--text-muted);cursor:pointer;transition:all .15s ease;text-align:center; }
+    .role-btn-pill.active { background:rgba(168,85,247,.18);border-color:rgba(168,85,247,.45);color:var(--admin-purple); }
+    .role-pill-row { display:flex;flex-wrap:wrap;gap:8px; }
+    .owner-only { display: none; }
     .role-user          { background:rgba(255,255,255,.05); color:var(--text-muted);   border:1px solid var(--border); }
 
     /* ── Search Bar ───────────────────────────────────── */
@@ -441,6 +446,188 @@
     }
     .back-btn:active { opacity: .7; }
 
+    /* ── User Management Panel ────────────────────────── */
+    .um-stats-banner {
+      display: grid; grid-template-columns: repeat(4,1fr);
+      gap: 1px; background: var(--glass-border);
+      border-bottom: 1px solid var(--glass-border);
+    }
+    .um-sb { background: var(--bg-card); padding: 10px 6px; text-align: center; }
+    .um-sb-val { font-size: 16px; font-weight: 900; line-height: 1; }
+    .um-sb-lbl { font-size: 9px; color: var(--text-muted); font-weight: 600;
+                 text-transform: uppercase; letter-spacing: .4px; margin-top: 3px; }
+
+    .um-search-bar { padding: var(--sp-sm) var(--sp-md); border-bottom: 1px solid var(--glass-border); }
+    .um-search-inner { position: relative; display: flex; align-items: center; }
+    .um-search-inner svg { position: absolute; left: 12px; color: var(--text-muted); pointer-events: none; }
+    .um-search-inner input {
+      width: 100%; padding: 9px 36px;
+      background: var(--bg-card2); border: 1.5px solid var(--border);
+      border-radius: var(--r-full); color: var(--text-primary); font-size: 13px;
+      font-family: inherit; transition: border-color var(--dur-fast);
+    }
+    .um-search-inner input:focus { outline: none; border-color: var(--admin-green); }
+    #um-clear-btn { position: absolute; right: 12px; background: none; border: none;
+                    color: var(--text-muted); cursor: pointer; font-size: 13px; padding: 2px; }
+
+    .ufc { display: inline-block; background: rgba(255,255,255,.08); border-radius: 99px;
+           padding: 0 5px; font-size: 9px; font-weight: 800; margin-left: 3px; }
+    .admin-chip.active .ufc { background: rgba(168,85,247,.25); color: var(--admin-purple); }
+
+    /* User list cards */
+    .um-user-card {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--bg-card);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--r-md);
+      padding: 11px var(--sp-md);
+      margin-bottom: var(--sp-sm);
+      cursor: pointer;
+      transition: border-color var(--dur-fast), background var(--dur-fast);
+    }
+    .um-user-card:active { background: var(--bg-card2); border-color: rgba(168,85,247,.4); }
+    .um-avatar {
+      width: 42px; height: 42px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--admin-purple), var(--admin-blue));
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px; font-weight: 900; color: #fff;
+      flex-shrink: 0; position: relative;
+    }
+    .um-online-pip {
+      position: absolute; bottom: 0; right: 0;
+      width: 11px; height: 11px; border-radius: 50%;
+      background: var(--admin-green);
+      border: 2px solid var(--bg-card);
+      box-shadow: 0 0 5px rgba(0,230,118,.5);
+    }
+    .um-info { flex: 1; min-width: 0; }
+    .um-name  { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .um-email { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .um-tags  { display: flex; gap: 4px; margin-top: 4px; flex-wrap: wrap; }
+    .um-tag { font-size: 9px; font-weight: 700; padding: 2px 6px; border-radius: 99px; text-transform: uppercase; }
+    .um-tag-sos  { background:rgba(255,215,0,.1);  color:var(--admin-gold);   border:1px solid rgba(255,215,0,.2); }
+    .um-tag-owner{ background:rgba(168,85,247,.12);color:var(--admin-purple); border:1px solid rgba(168,85,247,.25); }
+    .um-tag-admin{ background:rgba(239,68,68,.1);  color:var(--admin-red);    border:1px solid rgba(239,68,68,.2); }
+    .um-tag-sup  { background:rgba(0,230,118,.08); color:var(--admin-green);  border:1px solid rgba(0,230,118,.2); }
+    .um-tag-user { background:rgba(59,130,246,.08);color:var(--admin-blue);   border:1px solid rgba(59,130,246,.2); }
+    .um-tag-sus  { background:rgba(239,68,68,.12); color:var(--admin-red);    border:1px solid rgba(239,68,68,.3); }
+    .um-tag-ol   { font-size:9px;color:var(--admin-green);font-weight:700; }
+
+    /* User detail bottom sheet */
+    .ud-overlay {
+      position: fixed; inset: 0; z-index: 400;
+      background: rgba(0,0,0,.72);
+      backdrop-filter: blur(8px);
+      opacity: 0; pointer-events: none;
+      transition: opacity var(--dur-med) var(--ease);
+      display: flex; align-items: flex-end; justify-content: center;
+    }
+    .ud-overlay.open { opacity: 1; pointer-events: auto; }
+    .ud-sheet {
+      width: 100%; max-width: 430px;
+      background: var(--bg-card);
+      border-radius: var(--r-lg) var(--r-lg) 0 0;
+      border: 1px solid var(--glass-border); border-bottom: none;
+      max-height: 92dvh; display: flex; flex-direction: column;
+      transform: translateY(100%);
+      transition: transform .35s cubic-bezier(.32,1.2,.72,1);
+    }
+    .ud-overlay.open .ud-sheet { transform: translateY(0); }
+    .ud-handle { width: 36px; height: 4px; border-radius: 2px;
+                 background: var(--border); margin: 12px auto 0; flex-shrink: 0; }
+    .ud-body { overflow-y: auto; flex: 1; padding-bottom: env(safe-area-inset-bottom,16px); }
+
+    .ud-cover { height: 70px;
+      background: linear-gradient(135deg,#0d1a2e,#1a0a2e); position: relative; overflow: hidden; }
+    .ud-cover::before { content:''; position:absolute; inset:0;
+      background: radial-gradient(circle at 30% 60%,rgba(168,85,247,.18),transparent 60%),
+                  radial-gradient(circle at 80% 30%,rgba(59,130,246,.12),transparent 60%); }
+    .ud-close-btn {
+      position: absolute; top: 8px; right: 12px;
+      width: 28px; height: 28px; border-radius: 50%;
+      background: rgba(0,0,0,.4); border: none; color: #fff; font-size: 14px;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 2;
+    }
+    .ud-av-zone { display:flex;align-items:flex-end;gap:12px;
+                  padding:0 var(--sp-md);margin-top:-28px;position:relative;z-index:2; }
+    .ud-av-lg { width:56px;height:56px;border-radius:50%;
+      background:linear-gradient(135deg,var(--admin-purple),var(--admin-blue));
+      display:flex;align-items:center;justify-content:center;
+      font-size:22px;font-weight:900;color:#fff;
+      border:3px solid var(--bg-card);flex-shrink:0; }
+    .ud-id { padding-bottom:4px; }
+    .ud-id-name  { font-size:16px;font-weight:800; }
+    .ud-id-email { font-size:11px;color:var(--text-muted); }
+
+    .ud-stat-row { display:grid;grid-template-columns:repeat(3,1fr);
+                   gap:var(--sp-sm);padding:var(--sp-md); }
+    .ud-stat { background:var(--bg-card2);border:1px solid var(--glass-border);
+               border-radius:var(--r-sm);padding:10px 8px;text-align:center; }
+    .ud-stat-v { font-size:16px;font-weight:900;line-height:1; }
+    .ud-stat-l { font-size:9px;color:var(--text-muted);font-weight:600;
+                 text-transform:uppercase;letter-spacing:.3px;margin-top:3px; }
+
+    .ud-info-block { margin:0 var(--sp-md) var(--sp-md);
+      background:var(--bg-card2);border:1px solid var(--glass-border);border-radius:var(--r-md);overflow:hidden; }
+    .ud-ir { display:flex;align-items:center;justify-content:space-between;
+             padding:9px var(--sp-md);border-bottom:1px solid rgba(255,255,255,.04);font-size:13px; }
+    .ud-ir:last-child { border-bottom:none; }
+    .ud-ir-l { color:var(--text-muted);font-size:11px;font-weight:600; }
+    .ud-ir-v { font-weight:600;max-width:58%;text-align:right;word-break:break-all;font-size:12px; }
+
+    .ud-section { margin:0 var(--sp-md) var(--sp-md); }
+    .ud-section-title { font-size:10px;font-weight:700;text-transform:uppercase;
+                        letter-spacing:.6px;color:var(--text-muted);margin-bottom:var(--sp-sm); }
+
+    .ud-role-grid { display:grid;grid-template-columns:repeat(2,1fr);gap:var(--sp-sm); }
+    .ud-role-pill { padding:9px;border-radius:var(--r-md);text-align:center;
+      font-size:12px;font-weight:700;
+      background:var(--bg-card2);border:1.5px solid var(--border);color:var(--text-muted);
+      cursor:pointer;transition:all var(--dur-fast) var(--ease); }
+    .ud-role-pill:active { transform:scale(.97); }
+    .ud-role-pill.cur { background:var(--purple-dim,rgba(168,85,247,.15));
+                        border-color:rgba(168,85,247,.4);color:var(--admin-purple); }
+    .ud-role-pill.owner-p.cur { background:rgba(255,215,0,.1);border-color:rgba(255,215,0,.3);color:var(--admin-gold); }
+    .ud-role-pill.sus-p { color:var(--admin-red); }
+    .ud-role-pill.sus-p.cur { background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.3);color:var(--admin-red); }
+
+    .ud-bal-row { display:flex;gap:var(--sp-sm);align-items:stretch; }
+    .ud-bal-input { flex:1;background:var(--bg-card2);border:1.5px solid var(--border);
+      border-radius:var(--r-md);color:var(--text-primary);font-size:15px;
+      font-weight:700;padding:0 var(--sp-md);height:44px;font-family:inherit; }
+    .ud-bal-input:focus { outline:none;border-color:var(--admin-green); }
+    .ud-bal-add { background:rgba(0,230,118,.1);border:1.5px solid rgba(0,230,118,.25);
+      color:var(--admin-green);border-radius:var(--r-md);padding:0 14px;height:44px;
+      font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap; }
+    .ud-bal-sub { background:rgba(239,68,68,.08);border:1.5px solid rgba(239,68,68,.2);
+      color:var(--admin-red);border-radius:var(--r-md);padding:0 14px;height:44px;
+      font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap; }
+    .ud-bal-add:active { background:rgba(0,230,118,.2); }
+    .ud-bal-sub:active { background:rgba(239,68,68,.18); }
+
+    .ud-qa-grid { display:grid;grid-template-columns:1fr 1fr;gap:var(--sp-sm); }
+    .ud-qa { display:flex;align-items:center;justify-content:center;gap:6px;
+      padding:11px;border-radius:var(--r-md);font-size:12px;font-weight:700;
+      cursor:pointer;border:1.5px solid var(--glass-border);
+      background:var(--bg-card2);color:var(--text-secondary);
+      transition:all var(--dur-fast);font-family:inherit; }
+    .ud-qa:active { transform:scale(.97); }
+    .ud-qa.red { background:rgba(239,68,68,.06);border-color:rgba(239,68,68,.2);color:var(--admin-red); }
+
+    .ud-tx-mini { display:flex;align-items:center;gap:10px;
+      padding:9px var(--sp-md);border-bottom:1px solid rgba(255,255,255,.04); }
+    .ud-tx-mini:last-child { border-bottom:none; }
+    .ud-tx-icon { width:30px;height:30px;border-radius:var(--r-sm);background:var(--bg-card);
+                  display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0; }
+    .ud-tx-info { flex:1;min-width:0; }
+    .ud-tx-lbl  { font-size:12px;font-weight:600; }
+    .ud-tx-date { font-size:10px;color:var(--text-muted); }
+    .ud-tx-amt  { font-size:12px;font-weight:800;flex-shrink:0; }
+    .ud-tx-amt.cr { color:var(--admin-green); }
+    .ud-tx-amt.dr { color:var(--admin-red); }
+
+    @keyframes udSpin { to { transform:rotate(360deg); } }
+
   </style>
 </head>
 <body>
@@ -492,8 +679,9 @@
       <div class="admin-tab" data-tab="matches" onclick="switchTab('matches')">
         <span class="tab-icon">🎮</span>Matches
       </div>
-      <div class="admin-tab" data-tab="users" onclick="switchTab('users')">
+      <div class="admin-tab owner-only" data-tab="users" onclick="switchTab('users')">
         <span class="tab-icon">👥</span>Users
+        <span class="tab-badge" id="users-badge" style="display:none">0</span>
       </div>
     </div>
 
@@ -591,17 +779,49 @@
     <!-- ════════════════════════════════════════════════ -->
     <!-- TAB 4: USERS                                    -->
     <!-- ════════════════════════════════════════════════ -->
-    <div class="admin-panel" id="panel-users">
-      <div class="admin-search">
-        <span class="admin-search-icon">🔍</span>
-        <input type="text" id="user-search" placeholder="Magac ama email ka raadi..."
-          oninput="filterUsers(this.value)">
+    <div class="admin-panel owner-only" id="panel-users">
+
+      <!-- Stats banner -->
+      <div class="um-stats-banner">
+        <div class="um-sb"><div class="um-sb-val" id="um-total" style="color:var(--admin-blue)">—</div><div class="um-sb-lbl">Dhammaan</div></div>
+        <div class="um-sb"><div class="um-sb-val" id="um-online" style="color:var(--admin-green)">—</div><div class="um-sb-lbl">Online</div></div>
+        <div class="um-sb"><div class="um-sb-val" id="um-sos" style="color:var(--admin-gold)">—</div><div class="um-sb-lbl">Total SOS</div></div>
+        <div class="um-sb"><div class="um-sb-val" id="um-admins" style="color:var(--admin-purple)">—</div><div class="um-sb-lbl">Admins</div></div>
       </div>
-      <div class="section-hdr">
+
+      <!-- Search -->
+      <div class="um-search-bar">
+        <div class="um-search-inner">
+          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="user-search" placeholder="Magac, email, UID..."
+            autocomplete="off" oninput="filterUsers(this.value)">
+          <button id="um-clear-btn" style="display:none" onclick="clearUserSearch()">✕</button>
+        </div>
+      </div>
+
+      <!-- Filter chips -->
+      <div class="admin-filter-row" style="padding-bottom:0">
+        <div class="admin-chip active" data-ufilter="all"       onclick="setUserFilter('all',this)">👥 Dhammaan <span id="ufc-all" class="ufc">0</span></div>
+        <div class="admin-chip"        data-ufilter="online"    onclick="setUserFilter('online',this)"><span class="live-dot" style="width:6px;height:6px;margin-right:3px;background:var(--admin-green)"></span>Online <span id="ufc-online" class="ufc">0</span></div>
+        <div class="admin-chip"        data-ufilter="admins"    onclick="setUserFilter('admins',this)">🛡️ Admins <span id="ufc-admins" class="ufc">0</span></div>
+        <div class="admin-chip"        data-ufilter="highbal"   onclick="setUserFilter('highbal',this)">💰 Top SOS</div>
+        <div class="admin-chip"        data-ufilter="new"       onclick="setUserFilter('new',this)">🆕 Cusub</div>
+        <div class="admin-chip"        data-ufilter="suspended" onclick="setUserFilter('suspended',this)">🚫 Suspended</div>
+      </div>
+
+      <!-- Section header -->
+      <div class="section-hdr" style="padding-top:var(--sp-sm)">
         <h2>👥 Isticmaalayaasha</h2>
-        <span class="count-badge" id="user-count">0</span>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span class="count-badge" id="user-count">0</span>
+          <button class="refresh-btn" onclick="loadUsers()" title="Dib u cusboonaysii">
+            <svg id="um-refresh-icon" xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
       </div>
-      <div id="users-list">
+
+      <!-- List -->
+      <div id="users-list" style="padding:0 var(--sp-md)">
         <div class="admin-empty"><div class="icon">⏳</div><p>La soo qaadayaa...</p></div>
       </div>
       <div style="height:var(--sp-xl)"></div>
@@ -609,12 +829,12 @@
 
   </main>
 
-  <!-- ── User Detail Modal ──────────────────────────────── -->
-  <div class="modal-overlay" id="user-modal">
-    <div class="modal-sheet">
-      <div class="modal-handle"></div>
-      <div id="user-modal-content">
-        <div class="skeleton sk-block mb-md"></div>
+  <!-- ── User Detail Bottom Sheet ─────────────────────────── -->
+  <div class="ud-overlay" id="ud-overlay" onclick="handleUdOverlay(event)">
+    <div class="ud-sheet" id="ud-sheet">
+      <div class="ud-handle"></div>
+      <div class="ud-body" id="ud-body">
+        <!-- filled by JS -->
       </div>
     </div>
   </div>

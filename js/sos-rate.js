@@ -5,13 +5,12 @@
 // ============================================================
 (function () {
 
-  const FALLBACK_RATE = 32000;   // $0.25 = 8,000 SOS
+  const FALLBACK_RATE = 32000;
   const MIN_SOS       = 8000;
 
-  window._sosRate    = FALLBACK_RATE;
-  window._sosMin     = MIN_SOS;
+  window._sosRate = FALLBACK_RATE;
+  window._sosMin  = MIN_SOS;
 
-  // ── Unique ID counter (prevents SVG gradient collisions) ──
   let _svgCounter = 0;
 
   // ── Number formatter: 8000 → "8 kun", 32000 → "32 kun" ──
@@ -20,10 +19,7 @@
     const n = Math.round(amount);
     if (n === 0) return '0';
     if (n >= 1000 && n % 1000 === 0) return (n / 1000) + ' kun';
-    if (n >= 1000) {
-      const k = n / 1000;
-      return k.toFixed(1) + ' kun';
-    }
+    if (n >= 1000) return (n / 1000).toFixed(1) + ' kun';
     return n.toLocaleString();
   };
 
@@ -42,9 +38,8 @@
   }
 
   function updateRateDisplays() {
-    const rate = window._sosRate;
     document.querySelectorAll('.sos-usd-rate').forEach(el => {
-      el.textContent = `$1 = ${window.sosFormat(rate)} SOS`;
+      el.textContent = `$1 = ${window.sosFormat(window._sosRate)} SOS`;
     });
   }
 
@@ -62,16 +57,12 @@
     size   = size   || 40;
     amount = amount !== undefined ? amount : null;
 
-    const uid = ++_svgCounter; // unique per call — no gradient collisions
+    const uid = ++_svgCounter;
 
-    // Format amount label using kun
     let label = '';
-    if (amount !== null) {
-      label = window.sosFormat(amount);
-    }
+    if (amount !== null) label = window.sosFormat(amount);
     const safeLabel = escapeXML(label);
 
-    // Wider badge for longer labels
     const badgeW = safeLabel.length > 5 ? 44 : 38;
     const badgeX = 100 - badgeW - 2;
     const textX  = badgeX + badgeW / 2;
@@ -112,15 +103,16 @@
 </svg>`;
   };
 
-  // ── Static icon (no amount) for img/ folder use ──────────
+  // ── Static icon (no amount) ──────────────────────────────
   window._sosCoinImg = function(size) {
-    return `data:image/svg+xml;charset=utf-8,` + encodeURIComponent(window.sosCoinSVG(size));
+    return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(window.sosCoinSVG(size));
   };
 
-  // ── Update header SOS chip ───────────────────────────────
+  // ── Update header SOS chip — rebuilds chip content fully ─
   window._updateSosChip = function(sosBalance) {
     const rate = window._sosRate;
     const usd  = (sosBalance / rate).toFixed(2);
+
     document.querySelectorAll('.sos-chip').forEach(chip => {
       chip.innerHTML =
         window.sosCoinSVG(28) +
@@ -129,6 +121,7 @@
           `<div class="sos-chip-usd">≈ $${usd}</div>` +
         `</div>`;
     });
+
     document.querySelectorAll('.sos-balance-display').forEach(el => {
       el.textContent = window.sosFormat(sosBalance||0) + ' SOS';
     });
@@ -176,6 +169,8 @@
     document.querySelectorAll('img[src="img/sos-icon.svg"]').forEach(img => {
       img.src = window._sosCoinImg(parseInt(img.width)||32);
     });
+
+    if (window._navSosReady) window._navSosReady();
   }
 
   if (document.readyState === 'loading') {

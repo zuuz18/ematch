@@ -580,9 +580,13 @@
   }
 
   // If user already logged in → dashboard, else show login page
+  // Check if we just logged out — don't redirect back to dashboard
+  const justLoggedOut = sessionStorage.getItem('ematch_logged_out');
+  if (justLoggedOut) sessionStorage.removeItem('ematch_logged_out');
+
   const unsub = onAuthStateChanged(fireAuth, user => {
     unsub();
-    if (user) {
+    if (user && !justLoggedOut) {
       window.location.replace('dashboard.html');
     } else {
       hideLoading();

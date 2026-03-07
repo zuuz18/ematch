@@ -414,6 +414,8 @@ async function handleLogout() {
     window._ematch_userdata = null;
 
     localStorage.removeItem('ematch_user_cache');
+    // Mark that we just logged out — prevents index.html from auto-redirecting
+    sessionStorage.setItem('ematch_logged_out', '1');
     // Then sign out from Firebase
     await signOut(auth);
     // Force hard navigation to login — no back-button return

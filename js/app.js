@@ -1321,15 +1321,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   
 // ── PUSH ALERTS — Realtime listener ────────────────────────
 // Listens for new push_alerts, shows fullscreen popup once per alert
-let _pushSeenIds = new Set(JSON.parse(localStorage.getItem('_pushSeen') || '[]'));
+let _pushSeenIds = new Set(); // session-only — each login sees new alerts
 let _pushUnsubscribe = null;
 
 function startPushListener(uid) {
   if (_pushUnsubscribe) _pushUnsubscribe();
 
-  // Track docs present at startup — don't show popups for them
   let _initialLoad = true;
   const _startupIds = new Set();
+  const _loginTime = Date.now();
+  const FRESH_WINDOW_MS = 5 * 60 * 1000; // 5 daqiiqo gudahood diray = show xitaa login cusub
 
   _pushUnsubscribe = onSnapshot(
     query(
@@ -1338,27 +1339,41 @@ function startPushListener(uid) {
       limit(20)
     ),
     snap => {
-      // First snapshot = existing docs, just record them, show nothing
       if (_initialLoad) {
-        snap.docs.forEach(d => _startupIds.add(d.id));
+        // First snapshot: record existing docs
+        // But show any that were sent within FRESH_WINDOW_MS (admin just sent)
+        snap.docs.forEach(d => {
+          const a = d.data();
+          const sentAt = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+          const isFresh = (Date.now() - sentAt) < FRESH_WINDOW_MS;
+
+          // Show fresh alerts not yet seen this session
+          if (
+            isFresh &&
+            a.active !== false &&
+            (!a.targetUid || a.targetUid === uid) &&
+            !_pushSeenIds.has(d.id)
+          ) {
+            _pushSeenIds.add(d.id);
+            setTimeout(() => showPushPopup(a), 800); // slight delay after login
+          } else {
+            _startupIds.add(d.id); // older docs: skip
+          }
+        });
         _initialLoad = false;
         return;
       }
 
+      // Subsequent changes: show new additions immediately
       snap.docChanges().forEach(change => {
         if (change.type !== 'added') return;
         const id = change.doc.id;
-        // Skip docs that were already there on load
         if (_startupIds.has(id)) return;
         const a = change.doc.data();
-        // Skip inactive
         if (a.active === false) return;
-        // Skip if targeted to a different user
         if (a.targetUid && a.targetUid !== uid) return;
-        // Skip if already seen this session
         if (_pushSeenIds.has(id)) return;
         _pushSeenIds.add(id);
-        try { localStorage.setItem('_pushSeen', JSON.stringify([..._pushSeenIds].slice(-50))); } catch(e){}
         showPushPopup(a);
       });
     },

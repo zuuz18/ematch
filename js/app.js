@@ -1385,11 +1385,10 @@ function showPushPopup(a) {
   const COLORS = {
     info: '#3b82f6', success: '#00e676', warning: '#ffd700', promo: '#a855f7', urgent: '#ef4444'
   };
-  const col = COLORS[a.type] || '#3b82f6';
+  const col  = COLORS[a.type] || '#3b82f6';
   const icon = a.type==='success'?'🎉':a.type==='warning'?'⚠️':a.type==='promo'?'🎁':a.type==='urgent'?'🚨':'📢';
-  const textColor = (a.type==='warning') ? '#000' : '#fff';
 
-  // Remove any existing popup
+  // Remove any existing notification
   document.getElementById('_push-popup')?.remove();
 
   // Inject styles once
@@ -1397,81 +1396,78 @@ function showPushPopup(a) {
     const s = document.createElement('style');
     s.id = '_push-popup-styles';
     s.textContent = `
-      @keyframes _pushOverlayIn  { from{opacity:0} to{opacity:1} }
-      @keyframes _pushOverlayOut { from{opacity:1} to{opacity:0} }
-      @keyframes _pushCardIn  { from{opacity:0;transform:translateY(40px) scale(.92)} to{opacity:1;transform:translateY(0) scale(1)} }
-      @keyframes _pushCardOut { from{opacity:1;transform:scale(1)} to{opacity:0;transform:scale(.88)} }
-      @keyframes _pushIconPop { 0%{transform:scale(0) rotate(-20deg)} 70%{transform:scale(1.2) rotate(5deg)} 100%{transform:scale(1) rotate(0)} }
-      @keyframes _pushRing {
-        0%   { transform:scale(1);   opacity:.6 }
-        100% { transform:scale(2.2); opacity:0  }
+      @keyframes _ntfIn  {
+        from { opacity:0; transform:translateX(-50%) translateY(-24px) scale(.94); }
+        to   { opacity:1; transform:translateX(-50%) translateY(0)     scale(1);   }
+      }
+      @keyframes _ntfOut {
+        from { opacity:1; transform:translateX(-50%) translateY(0)     scale(1);   }
+        to   { opacity:0; transform:translateX(-50%) translateY(-20px) scale(.93); }
+      }
+      @keyframes _ntfProgress {
+        from { width:100%; }
+        to   { width:0%;   }
       }
       #_push-popup {
-        position:fixed;inset:0;z-index:99999;
-        display:flex;align-items:center;justify-content:center;
-        padding:20px;
-        background:rgba(0,0,0,.88);
-        backdrop-filter:blur(12px);
-        -webkit-backdrop-filter:blur(12px);
-        animation:_pushOverlayIn .25s ease forwards;
+        position: fixed;
+        top: 18px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 99999;
+        width: calc(100% - 32px);
+        max-width: 420px;
+        pointer-events: auto;
+        animation: _ntfIn .35s cubic-bezier(.34,1.56,.64,1) forwards;
       }
       #_push-popup-card {
-        position:relative;
-        width:100%;max-width:340px;
-        background:#0d1117;
-        border-radius:24px;
-        padding:36px 28px 28px;
-        text-align:center;
-        box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 30px 80px rgba(0,0,0,.8);
-        animation:_pushCardIn .4s cubic-bezier(.34,1.56,.64,1) forwards;
-        overflow:hidden;
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        background: #13181f;
+        border: 1px solid rgba(255,255,255,.1);
+        border-left: 4px solid var(--_nc, #3b82f6);
+        border-radius: 16px;
+        padding: 14px 16px 18px;
+        box-shadow: 0 8px 40px rgba(0,0,0,.7), 0 2px 8px rgba(0,0,0,.4);
+        position: relative;
+        overflow: hidden;
+        cursor: pointer;
       }
-      #_push-popup-glow {
-        position:absolute;top:-60px;left:50%;transform:translateX(-50%);
-        width:200px;height:200px;border-radius:50%;
-        pointer-events:none;
-        filter:blur(50px);
-        opacity:.35;
+      #_push-popup-icon {
+        font-size: 26px;
+        line-height: 1;
+        flex-shrink: 0;
+        margin-top: 2px;
       }
-      #_push-popup-icon-wrap {
-        position:relative;
-        width:80px;height:80px;
-        margin:0 auto 20px;
-        display:flex;align-items:center;justify-content:center;
-      }
-      #_push-popup-ring {
-        position:absolute;inset:0;border-radius:50%;
-        border:2px solid var(--_pcol,#3b82f6);
-        animation:_pushRing 1.2s ease-out .3s forwards;
-      }
-      #_push-popup-icon-bg {
-        width:80px;height:80px;border-radius:50%;
-        display:flex;align-items:center;justify-content:center;
-        font-size:36px;
-        animation:_pushIconPop .5s cubic-bezier(.34,1.56,.64,1) .15s both;
-      }
-      #_push-popup-type-bar {
-        position:absolute;top:0;left:0;right:0;height:3px;border-radius:24px 24px 0 0;
-      }
+      #_push-popup-content { flex: 1; min-width: 0; }
       #_push-popup-title {
-        font-size:20px;font-weight:800;color:#f0f6fc;
-        margin-bottom:10px;line-height:1.25;
-        letter-spacing:-.3px;
+        font-size: 14px;
+        font-weight: 800;
+        color: #f0f6fc;
+        margin-bottom: 3px;
+        line-height: 1.3;
       }
       #_push-popup-body {
-        font-size:14px;color:rgba(240,246,252,.55);
-        line-height:1.6;margin-bottom:24px;
+        font-size: 13px;
+        color: rgba(240,246,252,.55);
+        line-height: 1.45;
       }
-      #_push-popup-close {
-        width:100%;padding:14px;border:none;border-radius:14px;
-        cursor:pointer;font-size:15px;font-weight:700;
-        font-family:inherit;letter-spacing:.2px;
-        transition:opacity .15s,transform .1s;
+      #_push-popup-x {
+        position: absolute;
+        top: 10px; right: 12px;
+        background: none; border: none;
+        color: rgba(255,255,255,.3);
+        font-size: 16px; cursor: pointer;
+        padding: 2px 4px; line-height: 1;
+        transition: color .15s;
       }
-      #_push-popup-close:active { opacity:.85;transform:scale(.97); }
-      #_push-popup-sent {
-        margin-top:12px;font-size:11px;color:rgba(240,246,252,.25);
-        letter-spacing:.5px;text-transform:uppercase;
+      #_push-popup-x:hover { color: rgba(255,255,255,.7); }
+      #_push-popup-bar {
+        position: absolute;
+        bottom: 0; left: 0;
+        height: 3px;
+        border-radius: 0 0 0 12px;
+        animation: _ntfProgress 3s linear forwards;
       }
     `;
     document.head.appendChild(s);
@@ -1480,39 +1476,33 @@ function showPushPopup(a) {
   const el = document.createElement('div');
   el.id = '_push-popup';
   el.innerHTML = `
-    <div id="_push-popup-card" style="--_pcol:${col}">
-      <div id="_push-popup-type-bar" style="background:${col}"></div>
-      <div id="_push-popup-glow" style="background:${col}"></div>
-      <div id="_push-popup-icon-wrap">
-        <div id="_push-popup-ring"></div>
-        <div id="_push-popup-icon-bg" style="background:${col}22">${icon}</div>
+    <div id="_push-popup-card" style="--_nc:${col}">
+      <div id="_push-popup-icon">${icon}</div>
+      <div id="_push-popup-content">
+        <div id="_push-popup-title">${(a.title||'').replace(/</g,'&lt;')}</div>
+        <div id="_push-popup-body">${(a.body||'').replace(/</g,'&lt;')}</div>
       </div>
-      <div id="_push-popup-title">${(a.title||'').replace(/</g,'&lt;')}</div>
-      <div id="_push-popup-body">${(a.body||'').replace(/</g,'&lt;')}</div>
-      <button id="_push-popup-close"
-        style="background:linear-gradient(135deg,${col},${col}bb);color:${textColor}">
-        ✓ Xidh
-      </button>
-      <div id="_push-popup-sent">eMatch · Fariinta Rasmi ah</div>
+      <button id="_push-popup-x" aria-label="Xidh">✕</button>
+      <div id="_push-popup-bar" style="background:${col}"></div>
     </div>
   `;
 
   document.body.appendChild(el);
 
-  // Close on button click
-  el.querySelector('#_push-popup-close').onclick = () => {
-    el.style.animation = '_pushOverlayOut .2s ease forwards';
-    el.querySelector('#_push-popup-card').style.animation = '_pushCardOut .2s ease forwards';
-    setTimeout(() => el.remove(), 220);
-  };
+  function dismiss() {
+    if (!el.isConnected) return;
+    el.style.animation = '_ntfOut .25s ease forwards';
+    setTimeout(() => el.remove(), 260);
+  }
 
-  // Close on backdrop click
-  el.addEventListener('click', e => {
-    if (e.target === el) el.querySelector('#_push-popup-close').click();
-  });
+  // Close on X button
+  el.querySelector('#_push-popup-x').onclick = (e) => { e.stopPropagation(); dismiss(); };
 
-  // Auto-close after 60s
-  setTimeout(() => el?.isConnected && el.querySelector('#_push-popup-close')?.click(), 60000);
+  // Close on card click
+  el.querySelector('#_push-popup-card').onclick = () => dismiss();
+
+  // Auto-dismiss after 3 seconds
+  setTimeout(dismiss, 3000);
 }
 
 // ════════════════════════════════════════════════════════

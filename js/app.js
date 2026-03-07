@@ -1320,198 +1320,210 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   
 // ── PUSH ALERTS — Realtime listener ────────────────────────
-// Listens for new push_alerts, shows fullscreen popup once per alert
-let _pushSeenIds = new Set(); // session-only — each login sees new alerts
-let _pushUnsubscribe = null;
+let _pushSeenIds  = new Set();
+let _pushUnsub    = null;
 
 function startPushListener(uid) {
-  if (_pushUnsubscribe) _pushUnsubscribe();
+  if (_pushUnsub) { _pushUnsub(); _pushUnsub = null; }
 
-  let _initialLoad = true;
-  const _startupIds = new Set();
-  const _loginTime = Date.now();
-  const FRESH_WINDOW_MS = 5 * 60 * 1000; // 5 daqiiqo gudahood diray = show xitaa login cusub
+  const _loginTs = Date.now();
+  let   _booted  = false;
+  const _bootIds = new Set();
 
-  _pushUnsubscribe = onSnapshot(
-    query(
-      collection(db, 'push_alerts'),
-      orderBy('createdAt', 'desc'),
-      limit(20)
-    ),
+  // No orderBy → no composite index required
+  _pushUnsub = onSnapshot(
+    query(collection(db, 'push_alerts'), limit(30)),
     snap => {
-      if (_initialLoad) {
-        // First snapshot: record existing docs
-        // But show any that were sent within FRESH_WINDOW_MS (admin just sent)
+      if (!_booted) {
+        // Boot snapshot — record all existing IDs
+        // But show any sent within last 10 min (admin just fired while user was offline)
         snap.docs.forEach(d => {
-          const a = d.data();
-          const sentAt = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
-          const isFresh = (Date.now() - sentAt) < FRESH_WINDOW_MS;
-
-          // Show fresh alerts not yet seen this session
-          if (
-            isFresh &&
-            a.active !== false &&
-            (!a.targetUid || a.targetUid === uid) &&
-            !_pushSeenIds.has(d.id)
-          ) {
+          const a      = d.data();
+          const sentMs = a.createdAt?.toMillis?.() ?? 0;
+          const fresh  = (Date.now() - sentMs) < 10 * 60 * 1000;
+          const forMe  = !a.targetUid || a.targetUid === uid;
+          const unseen = !_pushSeenIds.has(d.id);
+          if (fresh && a.active !== false && forMe && unseen) {
             _pushSeenIds.add(d.id);
-            setTimeout(() => showPushPopup(a), 800); // slight delay after login
+            setTimeout(() => showPushPopup(a), 600);
           } else {
-            _startupIds.add(d.id); // older docs: skip
+            _bootIds.add(d.id);
           }
         });
-        _initialLoad = false;
+        _booted = true;
         return;
       }
 
-      // Subsequent changes: show new additions immediately
-      snap.docChanges().forEach(change => {
-        if (change.type !== 'added') return;
-        const id = change.doc.id;
-        if (_startupIds.has(id)) return;
-        const a = change.doc.data();
+      // Live changes after boot
+      snap.docChanges().forEach(ch => {
+        if (ch.type !== 'added') return;
+        const id = ch.doc.id;
+        if (_bootIds.has(id) || _pushSeenIds.has(id)) return;
+        const a = ch.doc.data();
         if (a.active === false) return;
         if (a.targetUid && a.targetUid !== uid) return;
-        if (_pushSeenIds.has(id)) return;
         _pushSeenIds.add(id);
         showPushPopup(a);
       });
     },
-    err => console.warn('push listener:', err.code)
+    err => console.warn('pushListener:', err.message)
   );
 }
 
+// ── SHOW PUSH POPUP — fullscreen overlay, auto-dismiss 3s ──
 function showPushPopup(a) {
-  const COLORS = {
-    info: '#3b82f6', success: '#00e676', warning: '#ffd700', promo: '#a855f7', urgent: '#ef4444'
+  const PALETTE = {
+    info:    { col:'#3b82f6', bg:'rgba(59,130,246,.12)',  icon:'📢' },
+    success: { col:'#00e676', bg:'rgba(0,230,118,.12)',   icon:'🎉' },
+    warning: { col:'#ffd700', bg:'rgba(255,215,0,.12)',   icon:'⚠️' },
+    promo:   { col:'#a855f7', bg:'rgba(168,85,247,.12)',  icon:'🎁' },
+    urgent:  { col:'#ef4444', bg:'rgba(239,68,68,.12)',   icon:'🚨' },
   };
-  const col  = COLORS[a.type] || '#3b82f6';
-  const icon = a.type==='success'?'🎉':a.type==='warning'?'⚠️':a.type==='promo'?'🎁':a.type==='urgent'?'🚨':'📢';
+  const p   = PALETTE[a.type] || PALETTE.info;
+  const col = p.col;
+  const bg  = p.bg;
+  const ico = p.icon;
 
-  // Remove existing
-  document.getElementById('_push-popup')?.remove();
+  // Remove any existing popup
+  document.getElementById('_pp')?.remove();
 
-  // Styles — inject once
-  if (!document.getElementById('_push-popup-styles')) {
-    const s = document.createElement('style');
-    s.id = '_push-popup-styles';
-    s.textContent = `
-      @keyframes _ntfSlideDown {
-        from { opacity:0; transform:translateY(-110%); }
-        to   { opacity:1; transform:translateY(0);     }
+  // ── Styles (inject once) ────────────────────────────────
+  if (!document.getElementById('_pp-css')) {
+    const st = document.createElement('style');
+    st.id = '_pp-css';
+    st.textContent = `
+      #_pp {
+        position:fixed; inset:0; z-index:999999;
+        display:flex; align-items:center; justify-content:center;
+        padding:24px;
+        background:rgba(0,0,0,.72);
+        backdrop-filter:blur(14px);
+        -webkit-backdrop-filter:blur(14px);
+        animation:_ppFadeIn .28s ease both;
       }
-      @keyframes _ntfSlideUp {
-        from { opacity:1; transform:translateY(0);     }
-        to   { opacity:0; transform:translateY(-110%); }
+      @keyframes _ppFadeIn  { from{opacity:0}             to{opacity:1}           }
+      @keyframes _ppFadeOut { from{opacity:1}             to{opacity:0}           }
+      @keyframes _ppCardIn  { from{opacity:0;transform:scale(.82) translateY(28px)} to{opacity:1;transform:scale(1) translateY(0)} }
+      @keyframes _ppCardOut { from{opacity:1;transform:scale(1)}  to{opacity:0;transform:scale(.88) translateY(-16px)} }
+      @keyframes _ppIconIn  { 0%{transform:scale(0) rotate(-15deg)} 65%{transform:scale(1.18) rotate(4deg)} 100%{transform:scale(1) rotate(0)} }
+      @keyframes _ppRing    { 0%{transform:scale(1);opacity:.7} 100%{transform:scale(2.4);opacity:0} }
+      @keyframes _ppBar     { from{width:100%} to{width:0%} }
+
+      #_pp-card {
+        position:relative;
+        width:100%; max-width:320px;
+        background:#0d1117;
+        border-radius:28px;
+        padding:0 0 24px;
+        text-align:center;
+        box-shadow:
+          0 0 0 1px rgba(255,255,255,.07),
+          0 32px 80px rgba(0,0,0,.85);
+        overflow:hidden;
+        animation:_ppCardIn .42s cubic-bezier(.34,1.5,.64,1) both;
       }
-      @keyframes _ntfProgress {
-        from { transform:scaleX(1); }
-        to   { transform:scaleX(0); }
+      #_pp-top-bar { height:4px; width:100%; }
+      #_pp-body    { padding:28px 24px 0; }
+      #_pp-icon-wrap {
+        position:relative; width:80px; height:80px;
+        margin:0 auto 18px;
+        display:flex; align-items:center; justify-content:center;
       }
-      #_push-popup {
-        position: fixed;
-        top: 0;
-        left: 0; right: 0;
-        z-index: 99999;
-        pointer-events: none;
+      #_pp-ring {
+        position:absolute; inset:-4px; border-radius:50%;
+        border:2px solid currentColor;
+        animation:_ppRing 1.1s ease-out .25s both;
       }
-      #_push-popup-inner {
-        pointer-events: auto;
-        margin: 0 auto;
-        max-width: 430px;
-        background: #13181f;
-        border-bottom: 1px solid rgba(255,255,255,.07);
-        box-shadow: 0 4px 24px rgba(0,0,0,.6);
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 9px 14px 12px;
-        position: relative;
-        overflow: hidden;
-        animation: _ntfSlideDown .32s cubic-bezier(.34,1.4,.64,1) forwards;
-        cursor: pointer;
+      #_pp-icon-bg {
+        width:80px; height:80px; border-radius:50%;
+        display:flex; align-items:center; justify-content:center;
+        font-size:34px;
+        animation:_ppIconIn .5s cubic-bezier(.34,1.5,.64,1) .1s both;
       }
-      #_push-popup-border {
-        position: absolute;
-        top: 0; left: 0; right: 0;
-        height: 2.5px;
+      #_pp-title {
+        font-size:19px; font-weight:800; color:#f0f6fc;
+        line-height:1.25; margin-bottom:8px; letter-spacing:-.3px;
       }
-      #_push-popup-icon {
-        font-size: 22px;
-        line-height: 1;
-        flex-shrink: 0;
+      #_pp-body-text {
+        font-size:14px; color:rgba(240,246,252,.5);
+        line-height:1.55; margin-bottom:24px;
       }
-      #_push-popup-texts {
-        flex: 1;
-        min-width: 0;
+      #_pp-dismiss {
+        display:flex; align-items:center; justify-content:center; gap:8px;
+        width:calc(100% - 48px); margin:0 auto;
+        padding:13px; border:none; border-radius:14px;
+        font-size:14px; font-weight:700; font-family:inherit;
+        cursor:pointer; letter-spacing:.1px;
+        transition:opacity .15s, transform .1s;
       }
-      #_push-popup-title {
-        font-size: 13px;
-        font-weight: 800;
-        color: #f0f6fc;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+      #_pp-dismiss:active { opacity:.82; transform:scale(.97); }
+      #_pp-countdown {
+        margin-top:12px; font-size:11px; color:rgba(255,255,255,.2);
+        letter-spacing:.5px;
       }
-      #_push-popup-body {
-        font-size: 12px;
-        color: rgba(240,246,252,.45);
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      #_push-popup-x {
-        background: none;
-        border: none;
-        color: rgba(255,255,255,.25);
-        font-size: 15px;
-        cursor: pointer;
-        padding: 2px 4px;
-        flex-shrink: 0;
-        line-height: 1;
-        transition: color .15s;
-      }
-      #_push-popup-x:hover { color: rgba(255,255,255,.6); }
-      #_push-popup-bar {
-        position: absolute;
-        bottom: 0; left: 0;
-        height: 2px;
-        width: 100%;
-        transform-origin: left;
-        animation: _ntfProgress 3s linear forwards;
+      #_pp-progress {
+        position:absolute; bottom:0; left:0; height:3px;
+        animation:_ppBar 3s linear forwards;
       }
     `;
-    document.head.appendChild(s);
+    document.head.appendChild(st);
   }
 
+  // ── Build element ───────────────────────────────────────
   const el = document.createElement('div');
-  el.id = '_push-popup';
+  el.id = '_pp';
+
+  const titleSafe = (a.title || '').replace(/</g,'&lt;');
+  const bodySafe  = (a.body  || '').replace(/</g,'&lt;');
+  const btnText   = a.type === 'urgent' ? '🚨 Waan Arkay' :
+                    a.type === 'promo'   ? '🎁 Mahadsanid' :
+                    a.type === 'success' ? '✅ Wacan'      :
+                    a.type === 'warning' ? '⚠️ Fahmay'    : '✓ Xidh';
+  const btnTextCol = (a.type === 'warning') ? '#000' : '#fff';
+
   el.innerHTML = `
-    <div id="_push-popup-inner">
-      <div id="_push-popup-border" style="background:${col}"></div>
-      <div id="_push-popup-icon">${icon}</div>
-      <div id="_push-popup-texts">
-        <div id="_push-popup-title">${(a.title||'').replace(/</g,'&lt;')}</div>
-        <div id="_push-popup-body">${(a.body||'').replace(/</g,'&lt;')}</div>
+    <div id="_pp-card">
+      <div id="_pp-top-bar" style="background:${col}"></div>
+      <div id="_pp-body">
+        <div id="_pp-icon-wrap">
+          <div id="_pp-ring" style="color:${col}"></div>
+          <div id="_pp-icon-bg" style="background:${bg}">${ico}</div>
+        </div>
+        <div id="_pp-title">${titleSafe}</div>
+        <div id="_pp-body-text">${bodySafe}</div>
+        <button id="_pp-dismiss" style="background:linear-gradient(135deg,${col},${col}bb);color:${btnTextCol}">
+          ${btnText}
+        </button>
+        <div id="_pp-countdown">3 ilbiriqsi kadib waa xidhmayaa...</div>
       </div>
-      <button id="_push-popup-x" aria-label="Xidh">✕</button>
-      <div id="_push-popup-bar" style="background:${col}"></div>
+      <div id="_pp-progress" style="background:${col}"></div>
     </div>
   `;
 
   document.body.appendChild(el);
 
+  // ── Dismiss logic ───────────────────────────────────────
   function dismiss() {
     if (!el.isConnected) return;
-    const inner = el.querySelector('#_push-popup-inner');
-    if (inner) inner.style.animation = '_ntfSlideUp .22s ease forwards';
+    el.style.animation = '_ppFadeOut .22s ease forwards';
+    const card = el.querySelector('#_pp-card');
+    if (card) card.style.animation = '_ppCardOut .22s ease forwards';
     setTimeout(() => el.remove(), 230);
   }
 
-  el.querySelector('#_push-popup-x').onclick    = (e) => { e.stopPropagation(); dismiss(); };
-  el.querySelector('#_push-popup-inner').onclick = () => dismiss();
+  // Countdown label update
+  let secs = 3;
+  const countEl = el.querySelector('#_pp-countdown');
+  const tick = setInterval(() => {
+    secs--;
+    if (countEl && secs > 0) countEl.textContent = secs + ' ilbiriqsi kadib waa xidhmayaa...';
+    else clearInterval(tick);
+  }, 1000);
 
-  // Auto-dismiss after 3 seconds
+  el.querySelector('#_pp-dismiss').onclick = dismiss;
+  el.addEventListener('click', e => { if (e.target === el) dismiss(); });
+
+  // Auto-dismiss 3s
   setTimeout(dismiss, 3000);
 }
 

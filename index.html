@@ -556,7 +556,7 @@
 </div>
 
 <script type="module">
-  import { initializeApp }            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+  import { initializeApp, getApps }   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
   const firebaseConfig = {
@@ -569,7 +569,9 @@
     appId:             "1:955647946180:web:c66947044f0dd6f633c891"
   };
 
-  const fireApp  = initializeApp(firebaseConfig, 'auth-check');
+  // Reuse default app instance if already initialized by app.js
+  const _existing = getApps().find(a => a.name === '[DEFAULT]');
+  const fireApp = _existing || initializeApp(firebaseConfig);
   const fireAuth = getAuth(fireApp);
   const loadingEl = document.getElementById('loading-screen');
   const authEl    = document.getElementById('auth-page');

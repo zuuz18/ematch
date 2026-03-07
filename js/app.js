@@ -1339,6 +1339,8 @@ function startPushListener(uid) {
         const a  = change.doc.data();
         // Skip inactive
         if (a.active === false) return;
+        // Skip if targeted to a different user
+        if (a.targetUid && a.targetUid !== uid) return;
         // Skip if already seen
         if (_pushSeenIds.has(id)) return;
         // Mark as seen immediately

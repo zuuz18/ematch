@@ -31,7 +31,7 @@ import {
 // ── 1. FIREBASE CONFIG ─────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyAW921oL1KTEk5n75xWvfGWM4Ab1SKnpbg",
-  authDomain: "ematch-bb818.firebaseapp.com",
+  authDomain: "ematch8.netlify.app",
   databaseURL: "https://ematch-bb818-default-rtdb.firebaseio.com",
   projectId: "ematch-bb818",
   storageBucket: "ematch-bb818.firebasestorage.app",
@@ -349,26 +349,21 @@ async function handleLogin(e) {
 // ── 12. GOOGLE SIGN-IN ─────────────────────────────────────
 async function handleGoogleSignIn() {
   if (!requireOnline()) return;
+
+  const btns = ['btn_google','btn_google_reg'].map(id => document.getElementById(id)).filter(Boolean);
+  btns.forEach(b => { b.disabled = true; b.style.opacity = '.6'; });
+
   const provider = new GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
-  // Mobile/Netlify: use redirect (popup blocks on mobile browsers)
-  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
+  provider.setCustomParameters({ prompt: 'select_account' });
+
   try {
-    if (isMobile) {
-      await signInWithRedirect(auth, provider);
-      // Page will reload — result handled in onAuthStateChanged
-    } else {
-      const cred = await signInWithPopup(auth, provider);
-      await _handleGoogleCred(cred);
-    }
+    await signInWithRedirect(auth, provider);
+    // Page will reload — result handled by getRedirectResult below
   } catch (err) {
-    if (err.code === 'auth/popup-blocked') {
-      // Popup blocked — fall back to redirect
-      await signInWithRedirect(auth, provider);
-    } else if (err.code !== 'auth/popup-closed-by-user') {
-      showToast('Google sign-in khalad: ' + err.message, 'error');
-    }
+    btns.forEach(b => { b.disabled = false; b.style.opacity = ''; });
+    showToast('Google sign-in khalad: ' + err.message, 'error');
   }
 }
 
@@ -380,17 +375,16 @@ async function _handleGoogleCred(cred) {
   if (!snap.exists()) {
     await setDoc(userRef, {
       uid,
-      fullName:  cred.user.displayName || '',
-      email:     cred.user.email || '',
-      phone:     '',
-      photoURL:  cred.user.photoURL || '',
-      role:      'user',
+      fullName:   cred.user.displayName || '',
+      email:      cred.user.email || '',
+      phone:      '',
+      photoURL:   cred.user.photoURL || '',
+      role:       'user',
       sosBalance: 0,
       escrowSOS:  0,
       createdAt:  serverTimestamp()
     });
   } else if (cred.user.photoURL && !snap.data().photoURL) {
-    // Save Google profile photo if not already set
     await updateDoc(userRef, { photoURL: cred.user.photoURL });
   }
   window.location.replace('dashboard.html');
@@ -1314,17 +1308,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   // INDEX.HTML — Login / Register
   // ════════════════════════════════════════════════════════
   if (page === 'index.html' || page === '') {
-    // Handle Google redirect result first (after signInWithRedirect returns)
+    // Check for Google redirect result (after signInWithRedirect returns)
     try {
-      const redirectCred = await getRedirectResult(auth);
-      if (redirectCred?.user) {
-        await _handleGoogleCred(redirectCred);
-        return;
-      }
-    } catch(e) {
-      if (e.code !== 'auth/no-current-user')
-        showToast('Google sign-in khalad: ' + e.message, 'error');
-    }
+      const rCred = await getRedirectResult(auth);
+      if (rCred?.user) { await _handleGoogleCred(rCred); return; }
+    } catch(e) { /* no redirect pending — normal */ }
+
     // authGuard(false) → if user logged in, redirects to dashboard and returns user obj
     // if no user, returns null and we show login page
     const user = await authGuard(false, 'dashboard.html');

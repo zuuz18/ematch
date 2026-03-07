@@ -1326,30 +1326,39 @@ let _pushUnsubscribe = null;
 
 function startPushListener(uid) {
   if (_pushUnsubscribe) _pushUnsubscribe();
-  // Listen to ALL active push alerts — filter seen ones client-side
+
+  // Track docs present at startup — don't show popups for them
+  let _initialLoad = true;
+  const _startupIds = new Set();
+
   _pushUnsubscribe = onSnapshot(
     query(
       collection(db, 'push_alerts'),
-      limit(10)
+      orderBy('createdAt', 'desc'),
+      limit(20)
     ),
     snap => {
+      // First snapshot = existing docs, just record them, show nothing
+      if (_initialLoad) {
+        snap.docs.forEach(d => _startupIds.add(d.id));
+        _initialLoad = false;
+        return;
+      }
+
       snap.docChanges().forEach(change => {
         if (change.type !== 'added') return;
         const id = change.doc.id;
-        const a  = change.doc.data();
+        // Skip docs that were already there on load
+        if (_startupIds.has(id)) return;
+        const a = change.doc.data();
         // Skip inactive
         if (a.active === false) return;
         // Skip if targeted to a different user
         if (a.targetUid && a.targetUid !== uid) return;
-        // Skip if already seen
+        // Skip if already seen this session
         if (_pushSeenIds.has(id)) return;
-        // Mark as seen immediately
         _pushSeenIds.add(id);
         try { localStorage.setItem('_pushSeen', JSON.stringify([..._pushSeenIds].slice(-50))); } catch(e){}
-        // Only show popup for alerts sent within last 2 minutes
-        const ts = a.createdAt?.toDate?.();
-        const age = ts ? (Date.now() - ts.getTime()) : 0;
-        if (age > 120000) return; // older than 2 min → skip (already loaded ones)
         showPushPopup(a);
       });
     },

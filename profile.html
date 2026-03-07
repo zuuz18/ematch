@@ -225,18 +225,24 @@
 
     /* ── UID chip ─────────────────────────────────────────── */
     .uid-chip {
-      display: inline-flex; align-items: center; gap: 5px;
+      display: inline-flex; align-items: center; gap: 7px;
       background: var(--bg-card2);
       border: 1px solid var(--border);
       border-radius: var(--r-full);
-      padding: 4px 12px;
-      font-size: 10px; font-family: 'Courier New', monospace;
-      color: var(--text-muted);
+      padding: 6px 16px 6px 12px;
       cursor: pointer;
       transition: border-color var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
       margin-top: 6px;
     }
     .uid-chip:active { border-color: var(--accent-green); background: rgba(0,230,118,.06); }
+    .uid-chip .uid-copy-icon { color: var(--text-muted); flex-shrink: 0; opacity: .6; }
+    #profile-uid-display {
+      font-family: 'Syne', 'Space Grotesk', sans-serif;
+      font-size: 17px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      color: var(--text-primary);
+    }
 
     /* ── Role badges ─────────────────────────────────────── */
     .role-badge { display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;padding:3px 10px;border-radius:var(--r-full);text-transform:uppercase;letter-spacing:.4px;margin-top:6px; }
@@ -454,10 +460,10 @@
 
         <div>
           <div class="uid-chip" onclick="copyUID()" title="UID koobiyaa" aria-label="UID koobiyaa">
-            <svg xmlns="http://www.w3.org/2000/svg" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <span id="profile-uid-display">ID0000000</span>
+            <svg class="uid-copy-icon" xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
               <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
             </svg>
-            <span id="profile-uid-display">UID: loading...</span>
           </div>
         </div>
       </div>
@@ -879,7 +885,7 @@
     set('info-email', u.email);
     set('info-phone', u.phone || 'La ma gelin');
     if (u.phone) document.getElementById('phone-check')?.style && (document.getElementById('phone-check').style.display='block');
-    set('profile-uid-display', 'UID: ' + (u.uid||'').slice(0,14) + '...');
+    set('profile-uid-display', window.uidToShortId(u.uid||''));
     const avInitialsEl = document.getElementById('profile-avatar-display');
     if (avInitialsEl) avInitialsEl.textContent = initials;
     if (u.createdAt?.toDate) set('info-createdat', u.createdAt.toDate().toLocaleDateString('so-SO'));
@@ -1421,5 +1427,110 @@
     });
   });
 </script>
+
+<div id="create-match-modal"
+  class="modal-overlay"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="create-modal-title">
+  <div class="modal-sheet cm-sheet">
+    <div class="modal-handle"></div>
+
+    <!-- Header -->
+    <div class="cm-header">
+      <div class="cm-header-glow"></div>
+      <div class="cm-header-content">
+        <div class="cm-header-icon" id="cm-header-icon">🎮</div>
+        <div>
+          <h2 id="create-modal-title" class="cm-title">Match Cusub Abuur</h2>
+          <p class="cm-subtitle" id="cm-subtitle-text">Platform dooro si aad u bilowdo</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('create-match-modal')" aria-label="Xidh">✕</button>
+    </div>
+
+    <form id="create-match-form" novalidate>
+    <div class="cm-body">
+
+      <!-- STEP 1: Game/Platform dooro -->
+      <div class="cm-section">
+        <div class="cm-section-label">🕹️ GAME DOORO</div>
+        <div class="cm-games-grid" id="cm-games-grid">
+          <!-- Dynamic from Firestore game_settings -->
+          <div class="cm-loading-games">⏳ La soo qaadayaa...</div>
+        </div>
+        <input type="hidden" id="cm_platform">
+        <div class="error-msg" id="cm_platform_err" role="alert" aria-live="polite"></div>
+      </div>
+
+      <!-- STEP 2: Cinwaan (optional) -->
+      <div class="cm-section">
+        <div class="cm-section-label">✏️ CINWAAN <span style="color:var(--text-muted);font-weight:400">(ikhtiyaari)</span></div>
+        <div class="input-wrap">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/>
+            <line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/>
+          </svg>
+          <input type="text" id="cm_title" placeholder="Tusaale: Pro 1v1 — La ciyaar!" maxlength="50">
+        </div>
+      </div>
+
+      <!-- STEP 3: In-Game Username -->
+      <div class="cm-section">
+        <div class="cm-section-label">👤 GAME-KA MAGACAAGA</div>
+        <div class="input-wrap">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <input type="text" id="cm_username" placeholder="Tusaale: PlayerXX123" autocomplete="off" aria-describedby="cm_username_err">
+        </div>
+        <div class="error-msg" id="cm_username_err" role="alert" aria-live="polite"></div>
+      </div>
+
+      <!-- STEP 4: Stake Amount -->
+      <div class="cm-section">
+        <div class="cm-section-label">💰 LACAGTA SAARKA <span class="cm-stake-range" id="cm-stake-range"></span></div>
+        <!-- Quick stake buttons -->
+        <div class="cm-stake-btns" id="cm-stake-btns">
+          <!-- Dynamic -->
+        </div>
+        <div class="input-wrap" style="margin-top:8px">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <input type="number" id="cm_stake" placeholder="Tirada geli..." inputmode="numeric" aria-describedby="cm_stake_err">
+        </div>
+        <div class="error-msg" id="cm_stake_err" role="alert" aria-live="polite"></div>
+        <div class="cm-balance-hint">
+          💳 Lacagtaada: <strong class="sos-balance-display cm-bal-val">—</strong> SOS
+        </div>
+      </div>
+
+    </div><!-- /cm-body -->
+
+    <div class="cm-footer">
+      <!-- Prize preview -->
+      <div class="cm-prize-preview" id="cm-prize-preview" style="display:none">
+        <div class="cm-prize-row">
+          <span>💰 Saarka aad gelisay</span>
+          <span id="cm-prize-stake-2" class="cm-prize-val">—</span>
+        </div>
+        <div class="cm-prize-row cm-prize-win">
+          <span>🏆 Haddaad guulaysato</span>
+          <span id="cm-prize-win-2" class="cm-prize-val green">—</span>
+        </div>
+      </div>
+      <!-- Submit -->
+      <button type="submit" class="btn btn-primary cm-submit-btn" id="btn_create_match">
+        <span class="btn-text">🎮 Match Abuur</span>
+        <div class="btn-spinner"></div>
+      </button>
+    </div><!-- /cm-footer -->
+
+    </form>
+  </div>
+</div>
+
 </body>
 </html>

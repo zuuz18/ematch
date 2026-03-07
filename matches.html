@@ -897,5 +897,110 @@
     if (b) b.classList.add('hidden');
   });
 </script>
+
+<div id="create-match-modal"
+  class="modal-overlay"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="create-modal-title">
+  <div class="modal-sheet cm-sheet">
+    <div class="modal-handle"></div>
+
+    <!-- Header -->
+    <div class="cm-header">
+      <div class="cm-header-glow"></div>
+      <div class="cm-header-content">
+        <div class="cm-header-icon" id="cm-header-icon">🎮</div>
+        <div>
+          <h2 id="create-modal-title" class="cm-title">Match Cusub Abuur</h2>
+          <p class="cm-subtitle" id="cm-subtitle-text">Platform dooro si aad u bilowdo</p>
+        </div>
+      </div>
+      <button class="modal-close" onclick="closeModal('create-match-modal')" aria-label="Xidh">✕</button>
+    </div>
+
+    <form id="create-match-form" novalidate>
+    <div class="cm-body">
+
+      <!-- STEP 1: Game/Platform dooro -->
+      <div class="cm-section">
+        <div class="cm-section-label">🕹️ GAME DOORO</div>
+        <div class="cm-games-grid" id="cm-games-grid">
+          <!-- Dynamic from Firestore game_settings -->
+          <div class="cm-loading-games">⏳ La soo qaadayaa...</div>
+        </div>
+        <input type="hidden" id="cm_platform">
+        <div class="error-msg" id="cm_platform_err" role="alert" aria-live="polite"></div>
+      </div>
+
+      <!-- STEP 2: Cinwaan (optional) -->
+      <div class="cm-section">
+        <div class="cm-section-label">✏️ CINWAAN <span style="color:var(--text-muted);font-weight:400">(ikhtiyaari)</span></div>
+        <div class="input-wrap">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/>
+            <line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/>
+          </svg>
+          <input type="text" id="cm_title" placeholder="Tusaale: Pro 1v1 — La ciyaar!" maxlength="50">
+        </div>
+      </div>
+
+      <!-- STEP 3: In-Game Username -->
+      <div class="cm-section">
+        <div class="cm-section-label">👤 GAME-KA MAGACAAGA</div>
+        <div class="input-wrap">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+            <circle cx="12" cy="7" r="4"/>
+          </svg>
+          <input type="text" id="cm_username" placeholder="Tusaale: PlayerXX123" autocomplete="off" aria-describedby="cm_username_err">
+        </div>
+        <div class="error-msg" id="cm_username_err" role="alert" aria-live="polite"></div>
+      </div>
+
+      <!-- STEP 4: Stake Amount -->
+      <div class="cm-section">
+        <div class="cm-section-label">💰 LACAGTA SAARKA <span class="cm-stake-range" id="cm-stake-range"></span></div>
+        <!-- Quick stake buttons -->
+        <div class="cm-stake-btns" id="cm-stake-btns">
+          <!-- Dynamic -->
+        </div>
+        <div class="input-wrap" style="margin-top:8px">
+          <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <input type="number" id="cm_stake" placeholder="Tirada geli..." inputmode="numeric" aria-describedby="cm_stake_err">
+        </div>
+        <div class="error-msg" id="cm_stake_err" role="alert" aria-live="polite"></div>
+        <div class="cm-balance-hint">
+          💳 Lacagtaada: <strong class="sos-balance-display cm-bal-val">—</strong> SOS
+        </div>
+      </div>
+
+    </div><!-- /cm-body -->
+
+    <div class="cm-footer">
+      <!-- Prize preview -->
+      <div class="cm-prize-preview" id="cm-prize-preview" style="display:none">
+        <div class="cm-prize-row">
+          <span>💰 Saarka aad gelisay</span>
+          <span id="cm-prize-stake-2" class="cm-prize-val">—</span>
+        </div>
+        <div class="cm-prize-row cm-prize-win">
+          <span>🏆 Haddaad guulaysato</span>
+          <span id="cm-prize-win-2" class="cm-prize-val green">—</span>
+        </div>
+      </div>
+      <!-- Submit -->
+      <button type="submit" class="btn btn-primary cm-submit-btn" id="btn_create_match">
+        <span class="btn-text">🎮 Match Abuur</span>
+        <div class="btn-spinner"></div>
+      </button>
+    </div><!-- /cm-footer -->
+
+    </form>
+  </div>
+</div>
+
 </body>
 </html>

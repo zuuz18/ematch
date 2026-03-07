@@ -17,10 +17,7 @@
   window.sosFormat = function(amount) {
     if (amount === null || amount === undefined) return '0';
     const n = Math.round(amount);
-    if (n === 0) return '0';
-    if (n >= 1000 && n % 1000 === 0) return (n / 1000) + ' kun';
-    if (n >= 1000) return (n / 1000).toFixed(1) + ' kun';
-    return n.toLocaleString();
+    return n.toLocaleString('en-US');
   };
 
   // ── Live rate fetch ──────────────────────────────────────
@@ -117,13 +114,13 @@
       chip.innerHTML =
         window.sosCoinSVG(28) +
         `<div style="line-height:1.2;margin-left:2px">` +
-          `<div class="sos-chip-amount">${window.sosFormat(sosBalance||0)}<small> SOS</small></div>` +
+          `<div class="sos-chip-amount">${window.sosFormat(sosBalance||0)}</div>` +
           `<div class="sos-chip-usd">≈ $${usd}</div>` +
         `</div>`;
     });
 
     document.querySelectorAll('.sos-balance-display').forEach(el => {
-      el.textContent = window.sosFormat(sosBalance||0) + ' SOS';
+      el.textContent = window.sosFormat(sosBalance||0);
     });
   };
 

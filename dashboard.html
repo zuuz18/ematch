@@ -297,6 +297,7 @@
     </div>
 
     <form id="create-match-form" novalidate>
+    <div class="cm-body">
 
       <!-- STEP 1: Game/Platform dooro -->
       <div class="cm-section">
@@ -353,23 +354,26 @@
         </div>
       </div>
 
+    </div><!-- /cm-body -->
+
+    <div class="cm-footer">
       <!-- Prize preview -->
       <div class="cm-prize-preview" id="cm-prize-preview" style="display:none">
         <div class="cm-prize-row">
           <span>💰 Saarka aad gelisay</span>
-          <span id="cm-prize-stake" class="cm-prize-val">—</span>
+          <span id="cm-prize-stake-2" class="cm-prize-val">—</span>
         </div>
         <div class="cm-prize-row cm-prize-win">
           <span>🏆 Haddaad guulaysato</span>
-          <span id="cm-prize-win" class="cm-prize-val green">—</span>
+          <span id="cm-prize-win-2" class="cm-prize-val green">—</span>
         </div>
       </div>
-
       <!-- Submit -->
       <button type="submit" class="btn btn-primary cm-submit-btn" id="btn_create_match">
         <span class="btn-text">🎮 Match Abuur</span>
         <div class="btn-spinner"></div>
       </button>
+    </div><!-- /cm-footer -->
 
     </form>
   </div>

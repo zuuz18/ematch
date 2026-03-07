@@ -251,30 +251,28 @@ select{cursor:pointer}
 /* ── Modals ─────────────────────────────────────────────── */
 .modal-overlay{
   position:fixed;inset:0;
-  background:rgba(0,0,0,.7);
-  backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
-  z-index:500;display:flex;align-items:flex-end;justify-content:center;
+  background:rgba(0,0,0,.75);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  z-index:500;display:flex;align-items:center;justify-content:center;
+  padding:20px;
   opacity:0;pointer-events:none;
   transition:opacity var(--dur-med) var(--ease);
 }
 .modal-overlay.open{opacity:1;pointer-events:all}
 .modal-sheet{
-  width:100%;max-width:430px;
+  width:100%;max-width:400px;
   background:var(--bg-card);
-  border-radius:var(--r-lg) var(--r-lg) 0 0;
-  border:1px solid var(--glass-border);border-bottom:none;
+  border-radius:20px;
+  border:1px solid var(--glass-border);
   padding:var(--sp-md);
-  padding-bottom:calc(var(--sp-lg) + env(safe-area-inset-bottom));
-  max-height:90dvh;overflow-y:auto;
-  transform:translateY(100%);
-  transition:transform var(--dur-med) var(--ease);
+  max-height:85dvh;overflow-y:auto;
+  transform:scale(.92) translateY(12px);
+  opacity:0;
+  transition:transform var(--dur-med) var(--ease), opacity var(--dur-med) var(--ease);
+  box-shadow:0 24px 64px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.04);
 }
-.modal-overlay.open .modal-sheet{transform:translateY(0)}
-.modal-handle{
-  width:40px;height:4px;
-  background:var(--border);border-radius:var(--r-full);
-  margin:0 auto var(--sp-md);
-}
+.modal-overlay.open .modal-sheet{transform:scale(1) translateY(0);opacity:1;}
+.modal-handle{display:none;}
 .modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--sp-lg)}
 .modal-close{
   width:32px;height:32px;
@@ -724,83 +722,124 @@ select{cursor:pointer}
    CREATE MATCH MODAL — Casri ah
    ══════════════════════════════════════════════════════════ */
 
-.cm-sheet { padding: 0 !important; overflow: hidden; }
+/* ── Create Match Modal — Centered Dialog ─────────────────── */
+.cm-sheet {
+  padding: 0 !important;
+  overflow: hidden;
+  max-width: 380px !important;
+  display: flex;
+  flex-direction: column;
+  max-height: 85dvh;
+}
 
 .cm-header {
   position: relative;
-  padding: var(--sp-lg) var(--sp-lg) var(--sp-md);
+  padding: 20px 20px 16px;
   overflow: hidden;
-  background: linear-gradient(135deg, rgba(0,230,118,.08), rgba(59,130,246,.06));
+  background: linear-gradient(135deg, rgba(0,230,118,.07) 0%, rgba(59,130,246,.05) 100%);
   border-bottom: 1px solid var(--glass-border);
+  border-radius: 20px 20px 0 0;
+  display: flex; align-items: center; justify-content: space-between;
 }
 .cm-header-glow {
-  position: absolute; top: -40px; right: -20px;
-  width: 160px; height: 160px;
-  background: radial-gradient(circle, rgba(0,230,118,.15), transparent 70%);
+  position: absolute; top: -50px; right: -30px;
+  width: 140px; height: 140px;
+  background: radial-gradient(circle, rgba(0,230,118,.18), transparent 70%);
   pointer-events: none;
 }
-.cm-header-content { display: flex; align-items: center; gap: var(--sp-md); }
+.cm-header-content { display: flex; align-items: center; gap: 12px; }
 .cm-header-icon {
-  font-size: 36px; line-height: 1;
-  filter: drop-shadow(0 0 12px rgba(0,230,118,.4));
+  font-size: 32px; line-height: 1;
+  filter: drop-shadow(0 0 10px rgba(0,230,118,.45));
   transition: all .3s var(--ease);
 }
-.cm-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
-.cm-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.cm-title { font-size: 16px; font-weight: 700; color: var(--text-primary); }
+.cm-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+/* Form flex container */
+.cm-sheet form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  min-height: 0;
+}
+
+/* Footer (prize + submit) — fixed at bottom, never scrolls */
+.cm-footer {
+  flex-shrink: 0;
+  padding: 0;
+}
+
+/* Scrollable body */
+.cm-body {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+.cm-body::-webkit-scrollbar { width: 3px; }
+.cm-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
 
 /* Section */
 .cm-section {
-  padding: var(--sp-md) var(--sp-lg);
+  padding: 14px 20px;
   border-bottom: 1px solid rgba(255,255,255,.04);
 }
 .cm-section:last-of-type { border-bottom: none; }
 .cm-section-label {
-  font-size: 10px; font-weight: 700; letter-spacing: .1em;
-  color: var(--text-muted); margin-bottom: var(--sp-sm);
+  font-size: 10px; font-weight: 700; letter-spacing: .08em;
+  color: var(--text-muted); margin-bottom: 8px;
   text-transform: uppercase;
+  display: flex; align-items: center; gap: 5px;
 }
 
-/* Games grid */
+/* Games grid — 4 cols compact */
 .cm-games-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
 }
 .cm-loading-games {
   grid-column: 1/-1;
-  text-align: center; padding: 20px;
+  text-align: center; padding: 16px;
   color: var(--text-muted); font-size: 13px;
 }
 .cm-game-btn {
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 4px; padding: 12px 6px;
+  gap: 3px; padding: 10px 4px;
   background: var(--bg-card2);
   border: 1.5px solid var(--border);
-  border-radius: var(--r-md);
-  cursor: pointer; transition: all .2s var(--ease);
-  color: var(--text-secondary); font-size: 11px; font-weight: 600;
+  border-radius: 10px;
+  cursor: pointer; transition: all .18s var(--ease);
+  color: var(--text-secondary); font-size: 10px; font-weight: 600;
   text-align: center; line-height: 1.2;
 }
-.cm-game-btn .cm-game-emoji { font-size: 24px; line-height: 1; }
-.cm-game-btn:active { transform: scale(.95); }
+.cm-game-btn .cm-game-emoji { font-size: 22px; line-height: 1; }
+.cm-game-btn:active { transform: scale(.93); }
 .cm-game-btn.selected {
   border-color: var(--accent-green);
-  background: rgba(0,230,118,.08);
+  background: rgba(0,230,118,.09);
   color: var(--accent-green);
-  box-shadow: 0 0 12px rgba(0,230,118,.2);
+  box-shadow: 0 0 10px rgba(0,230,118,.18);
 }
 
-/* Quick stake buttons */
+/* Quick stake pills */
 .cm-stake-btns {
-  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+  margin-bottom: 8px;
 }
 .cm-stake-pill {
-  padding: 5px 12px;
+  padding: 7px 4px;
   background: var(--bg-card2);
   border: 1.5px solid var(--border);
-  border-radius: var(--r-full);
+  border-radius: 8px;
   font-size: 11px; font-weight: 700; color: var(--text-secondary);
   cursor: pointer; transition: all .15s var(--ease);
+  text-align: center;
   white-space: nowrap;
 }
 .cm-stake-pill:active { transform: scale(.94); }
@@ -814,29 +853,30 @@ select{cursor:pointer}
   font-weight: 500; margin-left: 4px; text-transform: none; letter-spacing: 0;
 }
 .cm-balance-hint {
-  font-size: 12px; color: var(--text-muted); margin-top: 6px;
+  font-size: 11px; color: var(--text-muted); margin-top: 5px;
 }
 .cm-bal-val { color: var(--accent-green); }
 
 /* Prize preview */
 .cm-prize-preview {
-  margin: 0 var(--sp-lg) var(--sp-sm);
+  margin: 0 20px 4px;
   background: rgba(255,215,0,.05);
   border: 1px solid rgba(255,215,0,.15);
   border-radius: var(--r-md);
-  padding: var(--sp-sm) var(--sp-md);
+  padding: 8px 12px;
 }
 .cm-prize-row {
   display: flex; justify-content: space-between; align-items: center;
-  font-size: 12px; color: var(--text-secondary); padding: 3px 0;
+  font-size: 12px; color: var(--text-secondary); padding: 2px 0;
 }
 .cm-prize-val { font-weight: 700; color: var(--text-primary); }
 .cm-prize-val.green { color: var(--accent-green); }
 
+/* Submit button */
 .cm-submit-btn {
-  margin: var(--sp-sm) var(--sp-lg) var(--sp-lg);
-  width: calc(100% - var(--sp-lg)*2);
-  padding: 14px;
-  font-size: 15px; font-weight: 700;
+  margin: 12px 20px 20px;
+  width: calc(100% - 40px);
+  padding: 13px;
+  font-size: 14px; font-weight: 700;
   border-radius: var(--r-lg);
 }

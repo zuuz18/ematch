@@ -82,6 +82,19 @@ window.uploadToImgbb = async function(file, name) {
 
 
 // ── 4. UTILITIES ───────────────────────────────────────────
+
+// ── SHORT USER ID ───────────────────────────────────────────
+// Converts Firebase UID to friendly short ID: ID + 7 digits (deterministic)
+window.uidToShortId = function(uid) {
+  if (!uid) return 'ID0000000';
+  let h = 5381;
+  for (let i = 0; i < uid.length; i++) {
+    h = Math.imul((h << 5) + h, 1) + uid.charCodeAt(i) | 0;
+    h = h >>> 0;
+  }
+  return 'ID' + String(h % 10000000).padStart(7, '0');
+};
+
 function setLoading(btn, loading) {
   if (!btn) return;
   btn.classList.toggle('loading', loading);
@@ -272,7 +285,7 @@ function updateHeaderUI() {
   } else {
     const coins = currentUserData.sosBalance || 0;
     const fmt   = window.sosFormat ? window.sosFormat(coins) : coins.toLocaleString();
-    document.querySelectorAll(".sos-balance-display").forEach(el => { el.textContent = fmt + " SOS"; });
+    document.querySelectorAll(".sos-balance-display").forEach(el => { el.textContent = fmt; });
     const initials = (currentUserData.fullName || "U").split(" ").map(w => w[0]).join("").toUpperCase().slice(0, 2);
     document.querySelectorAll(".avatar").forEach(a => { a.textContent = initials; });
   }
@@ -630,8 +643,11 @@ async function openMatchModal(matchId) {
           </div>
         </div>` : ''}
       ${m.status==='open' && currentUser?.uid===m.createdBy ? `
-        <div class="card mt-sm" style="background:rgba(0,230,118,.05);border-color:rgba(0,230,118,.2);text-align:center">
-          <p style="font-size:13px;color:var(--accent-green)">✅ Adaa abuuray — qof kale ayaa la sugayaa</p>
+        <div class="card mt-sm" style="background:rgba(0,230,118,.04);border:1px solid rgba(0,230,118,.18);text-align:center;padding:14px">
+          <p style="font-size:13px;color:var(--accent-green);margin-bottom:10px">⏳ Adaa abuuray — qof kale ayaa la sugayaa</p>
+          <button class="btn btn-danger btn-sm" id="btn_cancel_match" data-id="${matchId}" style="width:auto;margin:0 auto;padding:8px 20px;font-size:13px">
+            ❌ Match Ka Noqo
+          </button>
         </div>` : ''}
       ${noFunds ? `
         <div class="card mt-sm" style="border-color:rgba(239,68,68,.3);text-align:center">
@@ -651,8 +667,60 @@ async function openMatchModal(matchId) {
         joinMatch(matchId, parseInt(joinBtn.dataset.stake), username);
       });
     }
+
+    const cancelBtn = content.querySelector('#btn_cancel_match');
+    if (cancelBtn) {
+      cancelBtn.addEventListener('click', () => cancelOwnMatch(matchId));
+    }
   } catch (err) {
     content.innerHTML = `<p class="text-muted p-md">Khalad: ${err.message}</p>`;
+  }
+}
+
+
+// ── CANCEL OWN MATCH (before anyone joins) ─────────────────
+async function cancelOwnMatch(matchId) {
+  if (!requireOnline() || !currentUser) return;
+  const btn = document.getElementById('btn_cancel_match');
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ ...'; }
+  try {
+    await runTransaction(db, async tx => {
+      const matchRef = doc(db, 'matches', matchId);
+      const userRef  = doc(db, 'users', currentUser.uid);
+      const mSnap    = await tx.get(matchRef);
+      const uSnap    = await tx.get(userRef);
+      if (!mSnap.exists()) throw new Error('Match lama helin');
+      const m = mSnap.data();
+      if (m.status !== 'open')      throw new Error('Match-ku ma jiro heer open');
+      if (m.createdBy !== currentUser.uid) throw new Error('Adiga kuma abuuri');
+      if (m.joinedBy)               throw new Error('Qof ayaa ku biirray — hada baajin kari meysid');
+      // Refund stake
+      const stake   = m.stakeAmount || 0;
+      const curBal  = uSnap.data()?.sosBalance || 0;
+      tx.update(matchRef, { status: 'cancelled', cancelledAt: serverTimestamp(), cancelledBy: currentUser.uid });
+      tx.update(userRef,  { sosBalance: curBal + stake });
+      // Refund transaction record
+      tx.set(doc(collection(db, 'transactions')), {
+        userId: currentUser.uid,
+        type: 'match_refund',
+        amount: stake,
+        matchId,
+        note: 'Match baajiyay (owner)',
+        createdAt: serverTimestamp()
+      });
+    });
+    if (currentUserData) currentUserData.sosBalance = (currentUserData.sosBalance || 0) + 0; // will refresh
+    closeModal('match-modal');
+    showToast('✅ Match la baajiyay — lacagta waa la soo celiyay', 'success');
+    // Refresh balance display
+    const freshSnap = await getDoc(doc(db, 'users', currentUser.uid));
+    if (freshSnap.exists() && currentUserData) {
+      currentUserData.sosBalance = freshSnap.data().sosBalance || 0;
+      if (window._updateSosChip) window._updateSosChip(currentUserData.sosBalance);
+    }
+  } catch(err) {
+    showToast('Khalad: ' + err.message, 'error');
+    if (btn) { btn.disabled = false; btn.innerHTML = '❌ Match Ka Noqo'; }
   }
 }
 
@@ -720,14 +788,27 @@ async function loadGameSettings() {
         { id:'COD',          name:'COD Mobile',    emoji:'🔫', active:true },
       ],
       stakePresets: [10000, 25000, 50000, 100000],
-      minStake: 8000,
+      minStake: 0,
       maxStake: 0 // 0 = xad la'aan
     };
   }
   return _gameSettings;
 }
 
-async function initCreateModal() {
+window.initCreateModal = async function initCreateModal() {
+  // Refresh user balance from Firestore before showing modal
+  try {
+    const freshSnap = await getDoc(doc(db, 'users', currentUser.uid));
+    if (freshSnap.exists()) {
+      const fresh = freshSnap.data();
+      if (currentUserData) currentUserData.sosBalance = fresh.sosBalance || 0;
+      // Update all balance displays
+      const fmt = window.sosFormat || (n => n.toLocaleString());
+      document.querySelectorAll('.sos-balance-display').forEach(el => {
+        el.textContent = fmt(fresh.sosBalance || 0);
+      });
+    }
+  } catch(e) { /* use cached */ }
   const settings = await loadGameSettings();
   const games    = (settings.games || []).filter(g => g.active !== false);
   const grid     = document.getElementById('cm-games-grid');
@@ -748,24 +829,25 @@ async function initCreateModal() {
   // Stake range label
   const min = settings.minStake || 8000;
   const max = settings.maxStake || 0;
-  if (rangeLbl) rangeLbl.textContent = max > 0
-    ? `(${(min/1000).toFixed(0)}K – ${(max/1000).toFixed(0)}K SOS)`
-    : `(Min: ${(min/1000).toFixed(0)}K SOS)`;
+  if (rangeLbl) rangeLbl.textContent = '';
 
-  // Quick stake buttons
-  const presets = settings.stakePresets || [10000, 25000, 50000, 100000];
+  // Quick stake buttons — min 8 pills, no K suffix, plain numbers
+  let presets = (settings.stakePresets && settings.stakePresets.length >= 8)
+    ? settings.stakePresets
+    : [8000,16000,32000,64000,96000,160000,320000,640000];
   if (stakeBtn) {
+    const fmt = window.sosFormat || (n => n.toLocaleString());
     stakeBtn.innerHTML = presets.map(p =>
       `<button type="button" class="cm-stake-pill" data-stake="${p}"
-        onclick="cmSelectStake(${p},this)">${p>=1000000?(p/1000000).toFixed(1)+'M':p>=1000?(p/1000).toFixed(0)+'K':p} SOS</button>`
+        onclick="cmSelectStake(${p},this)">${fmt(p)}</button>`
     ).join('');
   }
 
   // Set min attribute on input
   if (stakeEl) {
-    stakeEl.min  = min;
-    stakeEl.placeholder = `Min: ${(min/1000).toFixed(0)}K SOS`;
-    if (max > 0) stakeEl.max = max;
+    stakeEl.removeAttribute('min');
+    stakeEl.placeholder = 'Lacagta geli...';
+    if (max > 0) stakeEl.max = max; else stakeEl.removeAttribute('max');
   }
 
   // Reset selections
@@ -802,14 +884,14 @@ window.cmSelectStake = function(amount, el) {
 function updatePrizePreview() {
   const stake   = parseInt(document.getElementById('cm_stake')?.value) || 0;
   const preview = document.getElementById('cm-prize-preview');
-  const stakeEl = document.getElementById('cm-prize-stake');
-  const winEl   = document.getElementById('cm-prize-win');
+  const stakeEl = document.getElementById('cm-prize-stake-2') || document.getElementById('cm-prize-stake');
+  const winEl   = document.getElementById('cm-prize-win-2') || document.getElementById('cm-prize-win');
   if (!preview) return;
   if (stake < 1) { preview.style.display = 'none'; return; }
   preview.style.display = '';
   const fmt = window.sosFormat || (n => n.toLocaleString());
-  if (stakeEl) stakeEl.textContent = fmt(stake) + ' SOS';
-  if (winEl)   winEl.textContent   = fmt(stake * 2) + ' SOS';
+  if (stakeEl) stakeEl.textContent = fmt(stake);
+  if (winEl)   winEl.textContent   = fmt(stake * 2);
   // Deselect stake pills if manual input
   const anyMatch = [...document.querySelectorAll('.cm-stake-pill')]
     .some(b => parseInt(b.dataset.stake) === stake);
@@ -817,7 +899,7 @@ function updatePrizePreview() {
 }
 
 // ── 20. CREATE MATCH ───────────────────────────────────────
-async function handleCreateMatch(e) {
+window.handleCreateMatch = async function handleCreateMatch(e) {
   e.preventDefault();
   if (!requireOnline() || !currentUser) return;
   const platform    = document.getElementById('cm_platform')?.value;
@@ -835,9 +917,14 @@ async function handleCreateMatch(e) {
   let valid = true;
   if (!platform)   { showError('cm_platform', 'Game dooro'); valid = false; }
   if (!username)   { showError('cm_username', 'Game-ka magacaaga geli'); valid = false; }
-  if (stakeAmount < minStake) { showError('cm_stake', `Ugu yaraan ${(minStake/1000).toFixed(0)}K SOS`); valid = false; }
-  if (maxStake > 0 && stakeAmount > maxStake) { showError('cm_stake', `Ugu badan ${(maxStake/1000).toFixed(0)}K SOS`); valid = false; }
-  if ((currentUserData?.sosBalance||0) < stakeAmount) { showError('cm_stake', 'Lacag kuma filna'); valid = false; }
+
+  if (maxStake > 0 && stakeAmount > maxStake) { const fmtE2=window.sosFormat||(n=>n.toLocaleString()); showError('cm_stake', `Ugu badan ${fmtE2(maxStake)} SOS`); valid = false; }
+  const availBal = currentUserData?.sosBalance || 0;
+  if (availBal < stakeAmount) {
+    const fmtB = window.sosFormat || (n => n.toLocaleString());
+    showError('cm_stake', `Lacagtaada: ${fmtB(availBal)} — kuma filna`);
+    valid = false;
+  }
   if (!valid) return;
   setLoading(btn, true);
   try {
@@ -1158,7 +1245,7 @@ function fillProfileUI() {
   set('info-fullname',         u.fullName || '—');
   set('info-email',            u.email    || '—');
   set('info-phone',            u.phone    || 'La ma gelin');
-  set('profile-uid-display',  'UID: ' + (u.uid||'').slice(0,18) + '...');
+  set('profile-uid-display', window.uidToShortId(u.uid||''));
   const avatarEl = document.getElementById('profile-avatar-display');
   if (avatarEl) avatarEl.textContent = initials;
   const infoDate = document.getElementById('info-createdat');
@@ -1232,19 +1319,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ════════════════════════════════════════════════════════
   // DASHBOARD.HTML
   // ════════════════════════════════════════════════════════
+
+  // ── GLOBAL: Create Match modal (available on all pages) ──────
+  document.getElementById('create-match-form')?.addEventListener('submit', window.handleCreateMatch);
+  document.getElementById('cm_stake')?.addEventListener('input', updatePrizePreview);
+  document.getElementById('btn_open_create')?.addEventListener('click', () => {
+    _gameSettings = null; openModal('create-match-modal'); window.initCreateModal();
+  });
+
   if (page === 'dashboard.html') {
     await authGuard(true);
     const matchesContainer = document.getElementById('matches-list');
     loadMatches(matchesContainer, 'all');
     initFilterChips(matchesContainer);
-    document.getElementById('btn_open_create')  ?.addEventListener('click',  () => { _gameSettings = null; openModal('create-match-modal'); initCreateModal(); });
-    document.getElementById('create-match-form') ?.addEventListener('submit', handleCreateMatch);
-    // Prize preview live update
-    document.getElementById('cm_stake')?.addEventListener('input', updatePrizePreview);
+    // (create modal listeners handled globally above)
     document.getElementById('btn_logout')        ?.addEventListener('click',  handleLogout);
     const pendingJoin = localStorage.getItem('pending_join');
     if (pendingJoin) { localStorage.removeItem('pending_join'); setTimeout(() => openMatchModal(pendingJoin), 600); }
-    if (localStorage.getItem('open_create') === '1') { localStorage.removeItem('open_create'); setTimeout(() => { _gameSettings = null; openModal('create-match-modal'); initCreateModal(); }, 400); }
     return;
   }
 
@@ -1357,7 +1448,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('menu_about')?.addEventListener('click', () => openModal('about-modal'));
     window.copyUID = function() {
       const uid = currentUser?.uid;
-      if (uid) navigator.clipboard.writeText(uid).then(() => showToast('✅ UID la koobiyay!','success')).catch(() => showToast('Koobiyaynta waa fashilantay','error'));
+      const shortId = window.uidToShortId(uid);
+      if (uid) navigator.clipboard.writeText(shortId).then(() => showToast('✅ ' + shortId + ' la koobiyay!','success')).catch(() => showToast('Koobiyaynta waa fashilantay','error'));
     };
     return;
   }

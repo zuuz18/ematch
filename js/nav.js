@@ -52,11 +52,9 @@
         a.appendChild(lbl);
         a.addEventListener('click', function (e) {
           e.preventDefault();
-          if (currentPage === 'dashboard.html') {
-            if (window.openModal) window.openModal('create-match-modal');
-          } else {
-            localStorage.setItem('open_create', '1');
-            window.location.href = 'dashboard.html';
+          if (window.openModal) {
+            window.openModal('create-match-modal');
+            if (window.initCreateModal) window.initCreateModal();
           }
         });
       } else {

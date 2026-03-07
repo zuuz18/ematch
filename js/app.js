@@ -1388,85 +1388,96 @@ function showPushPopup(a) {
   const col  = COLORS[a.type] || '#3b82f6';
   const icon = a.type==='success'?'🎉':a.type==='warning'?'⚠️':a.type==='promo'?'🎁':a.type==='urgent'?'🚨':'📢';
 
-  // Remove any existing notification
+  // Remove existing
   document.getElementById('_push-popup')?.remove();
 
-  // Inject styles once
+  // Styles — inject once
   if (!document.getElementById('_push-popup-styles')) {
     const s = document.createElement('style');
     s.id = '_push-popup-styles';
     s.textContent = `
-      @keyframes _ntfIn  {
-        from { opacity:0; transform:translateX(-50%) translateY(-24px) scale(.94); }
-        to   { opacity:1; transform:translateX(-50%) translateY(0)     scale(1);   }
+      @keyframes _ntfSlideDown {
+        from { opacity:0; transform:translateY(-110%); }
+        to   { opacity:1; transform:translateY(0);     }
       }
-      @keyframes _ntfOut {
-        from { opacity:1; transform:translateX(-50%) translateY(0)     scale(1);   }
-        to   { opacity:0; transform:translateX(-50%) translateY(-20px) scale(.93); }
+      @keyframes _ntfSlideUp {
+        from { opacity:1; transform:translateY(0);     }
+        to   { opacity:0; transform:translateY(-110%); }
       }
       @keyframes _ntfProgress {
-        from { width:100%; }
-        to   { width:0%;   }
+        from { transform:scaleX(1); }
+        to   { transform:scaleX(0); }
       }
       #_push-popup {
         position: fixed;
-        top: 18px;
-        left: 50%;
-        transform: translateX(-50%);
+        top: 0;
+        left: 0; right: 0;
         z-index: 99999;
-        width: calc(100% - 32px);
-        max-width: 420px;
-        pointer-events: auto;
-        animation: _ntfIn .35s cubic-bezier(.34,1.56,.64,1) forwards;
+        pointer-events: none;
       }
-      #_push-popup-card {
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
+      #_push-popup-inner {
+        pointer-events: auto;
+        margin: 0 auto;
+        max-width: 430px;
         background: #13181f;
-        border: 1px solid rgba(255,255,255,.1);
-        border-left: 4px solid var(--_nc, #3b82f6);
-        border-radius: 16px;
-        padding: 14px 16px 18px;
-        box-shadow: 0 8px 40px rgba(0,0,0,.7), 0 2px 8px rgba(0,0,0,.4);
+        border-bottom: 1px solid rgba(255,255,255,.07);
+        box-shadow: 0 4px 24px rgba(0,0,0,.6);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 14px 12px;
         position: relative;
         overflow: hidden;
+        animation: _ntfSlideDown .32s cubic-bezier(.34,1.4,.64,1) forwards;
         cursor: pointer;
       }
+      #_push-popup-border {
+        position: absolute;
+        top: 0; left: 0; right: 0;
+        height: 2.5px;
+      }
       #_push-popup-icon {
-        font-size: 26px;
+        font-size: 22px;
         line-height: 1;
         flex-shrink: 0;
-        margin-top: 2px;
       }
-      #_push-popup-content { flex: 1; min-width: 0; }
+      #_push-popup-texts {
+        flex: 1;
+        min-width: 0;
+      }
       #_push-popup-title {
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 800;
         color: #f0f6fc;
-        margin-bottom: 3px;
-        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       #_push-popup-body {
-        font-size: 13px;
-        color: rgba(240,246,252,.55);
-        line-height: 1.45;
+        font-size: 12px;
+        color: rgba(240,246,252,.45);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
       }
       #_push-popup-x {
-        position: absolute;
-        top: 10px; right: 12px;
-        background: none; border: none;
-        color: rgba(255,255,255,.3);
-        font-size: 16px; cursor: pointer;
-        padding: 2px 4px; line-height: 1;
+        background: none;
+        border: none;
+        color: rgba(255,255,255,.25);
+        font-size: 15px;
+        cursor: pointer;
+        padding: 2px 4px;
+        flex-shrink: 0;
+        line-height: 1;
         transition: color .15s;
       }
-      #_push-popup-x:hover { color: rgba(255,255,255,.7); }
+      #_push-popup-x:hover { color: rgba(255,255,255,.6); }
       #_push-popup-bar {
         position: absolute;
         bottom: 0; left: 0;
-        height: 3px;
-        border-radius: 0 0 0 12px;
+        height: 2px;
+        width: 100%;
+        transform-origin: left;
         animation: _ntfProgress 3s linear forwards;
       }
     `;
@@ -1476,9 +1487,10 @@ function showPushPopup(a) {
   const el = document.createElement('div');
   el.id = '_push-popup';
   el.innerHTML = `
-    <div id="_push-popup-card" style="--_nc:${col}">
+    <div id="_push-popup-inner">
+      <div id="_push-popup-border" style="background:${col}"></div>
       <div id="_push-popup-icon">${icon}</div>
-      <div id="_push-popup-content">
+      <div id="_push-popup-texts">
         <div id="_push-popup-title">${(a.title||'').replace(/</g,'&lt;')}</div>
         <div id="_push-popup-body">${(a.body||'').replace(/</g,'&lt;')}</div>
       </div>
@@ -1491,15 +1503,13 @@ function showPushPopup(a) {
 
   function dismiss() {
     if (!el.isConnected) return;
-    el.style.animation = '_ntfOut .25s ease forwards';
-    setTimeout(() => el.remove(), 260);
+    const inner = el.querySelector('#_push-popup-inner');
+    if (inner) inner.style.animation = '_ntfSlideUp .22s ease forwards';
+    setTimeout(() => el.remove(), 230);
   }
 
-  // Close on X button
-  el.querySelector('#_push-popup-x').onclick = (e) => { e.stopPropagation(); dismiss(); };
-
-  // Close on card click
-  el.querySelector('#_push-popup-card').onclick = () => dismiss();
+  el.querySelector('#_push-popup-x').onclick    = (e) => { e.stopPropagation(); dismiss(); };
+  el.querySelector('#_push-popup-inner').onclick = () => dismiss();
 
   // Auto-dismiss after 3 seconds
   setTimeout(dismiss, 3000);

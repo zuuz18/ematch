@@ -250,6 +250,8 @@ async function loadUserData(uid) {
     window._ematch_userdata = currentUserData;
     updateHeaderUI();
     if (window._navUpdate) window._navUpdate(currentUserData);
+    // Start realtime push alert listener
+    startPushListener(uid);
 
     // ── Patch lastSeen (always) + createdAt (if missing) ──
     try {
@@ -1316,7 +1318,106 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // ════════════════════════════════════════════════════════
+  
+// ── PUSH ALERTS — Realtime listener ────────────────────────
+// Listens for new push_alerts, shows fullscreen popup once per alert
+let _pushSeenIds = new Set(JSON.parse(localStorage.getItem('_pushSeen') || '[]'));
+let _pushUnsubscribe = null;
+
+function startPushListener(uid) {
+  if (_pushUnsubscribe) _pushUnsubscribe();
+  // Only listen to alerts created after page load
+  const since = new Date();
+  _pushUnsubscribe = onSnapshot(
+    query(
+      collection(db, 'push_alerts'),
+      where('active', '==', true),
+      orderBy('createdAt', 'desc'),
+      limit(5)
+    ),
+    snap => {
+      snap.docChanges().forEach(change => {
+        if (change.type !== 'added') return;
+        const id = change.doc.id;
+        const a  = change.doc.data();
+        // Skip if already seen or older than page load
+        if (_pushSeenIds.has(id)) return;
+        const ts = a.createdAt?.toDate?.();
+        if (ts && ts < since) return;
+        // Mark as seen
+        _pushSeenIds.add(id);
+        try { localStorage.setItem('_pushSeen', JSON.stringify([..._pushSeenIds].slice(-50))); } catch(e){}
+        showPushPopup(a);
+      });
+    },
+    err => console.warn('push listener:', err.code)
+  );
+}
+
+function showPushPopup(a) {
+  const COLORS = {
+    info: '#3b82f6', success: '#00e676', warning: '#ffd700', promo: '#a855f7', urgent: '#ef4444'
+  };
+  const col = COLORS[a.type] || '#3b82f6';
+
+  // Remove existing popup
+  document.getElementById('_push-popup')?.remove();
+
+  const el = document.createElement('div');
+  el.id = '_push-popup';
+  el.style.cssText = `
+    position:fixed;inset:0;z-index:9999;
+    display:flex;align-items:center;justify-content:center;
+    padding:24px;
+    background:rgba(0,0,0,0.82);
+    backdrop-filter:blur(8px);
+    animation:_pushIn .3s cubic-bezier(.34,1.56,.64,1) forwards;
+  `;
+
+  el.innerHTML = `
+    <style>
+      @keyframes _pushIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
+      @keyframes _pushOut{to{opacity:0;transform:scale(.9)}}
+      #_push-popup-card{
+        width:100%;max-width:360px;
+        background:#161b22;
+        border:1px solid rgba(255,255,255,.1);
+        border-top:3px solid ${col};
+        border-radius:16px;
+        padding:28px 24px 24px;
+        box-shadow:0 20px 60px rgba(0,0,0,.7);
+        text-align:center;
+      }
+      #_push-popup-icon{font-size:44px;margin-bottom:12px;line-height:1}
+      #_push-popup-title{font-size:18px;font-weight:800;color:#f0f6fc;margin-bottom:8px;line-height:1.3}
+      #_push-popup-body{font-size:14px;color:#8b949e;line-height:1.5;margin-bottom:20px}
+      #_push-popup-close{
+        width:100%;padding:12px;border:none;border-radius:10px;cursor:pointer;
+        font-size:14px;font-weight:700;
+        background:linear-gradient(135deg,${col},${col}cc);
+        color:${a.type==='warning'?'#000':'#fff'};
+      }
+    </style>
+    <div id="_push-popup-card">
+      <div id="_push-popup-icon">${
+        a.type==='success'?'🎉':a.type==='warning'?'⚠️':a.type==='promo'?'🎁':a.type==='urgent'?'🚨':'📢'
+      }</div>
+      <div id="_push-popup-title">${(a.title||'').replace(/</g,'&lt;')}</div>
+      <div id="_push-popup-body">${(a.body||'').replace(/</g,'&lt;')}</div>
+      <button id="_push-popup-close">Xidh</button>
+    </div>
+  `;
+
+  document.body.appendChild(el);
+  document.getElementById('_push-popup-close').onclick = () => {
+    el.style.animation = '_pushOut .2s ease forwards';
+    setTimeout(() => el.remove(), 200);
+  };
+  // Auto-close after 30s
+  setTimeout(() => el?.remove(), 30000);
+}
+
+// ════════════════════════════════════════════════════════
   // DASHBOARD.HTML
   // ════════════════════════════════════════════════════════
 

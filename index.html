@@ -556,22 +556,8 @@
 </div>
 
 <script type="module">
-  // Minimal init — app.js handles all auth logic including Google redirect
-  // This script only manages loading screen visibility
-  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-  import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-
-  const firebaseConfig = {
-    apiKey:            "AIzaSyAW921oL1KTEk5n75xWvfGWM4Ab1SKnpbg",
-    authDomain:        "ematch8.netlify.app",
-    projectId:         "ematch-bb818",
-    storageBucket:     "ematch-bb818.firebasestorage.app",
-    messagingSenderId: "955647946180",
-    appId:             "1:955647946180:web:c66947044f0dd6f633c891"
-  };
-
-  const fireApp  = getApps().find(a => a.name === '[DEFAULT]') || initializeApp(firebaseConfig);
-  const fireAuth = getAuth(fireApp);
+  // app.js handles all Firebase + auth logic
+  // This just shows the auth page if not redirected
   const loadingEl = document.getElementById('loading-screen');
   const authEl    = document.getElementById('auth-page');
 
@@ -579,25 +565,18 @@
     if (loadingEl) { loadingEl.classList.add('fade-out'); setTimeout(() => loadingEl.style.display = 'none', 500); }
   }
 
-  // If user already logged in → dashboard, else show login page
-  // Check if we just logged out — don't redirect back to dashboard
-  const justLoggedOut = sessionStorage.getItem('ematch_logged_out');
-  if (justLoggedOut) sessionStorage.removeItem('ematch_logged_out');
-
-  const unsub = onAuthStateChanged(fireAuth, user => {
-    unsub();
-    if (user && !justLoggedOut) {
-      window.location.replace('dashboard.html');
-    } else {
-      hideLoading();
-      setTimeout(() => authEl?.classList.add('visible'), 50);
-      initParticles();
-      initTabs();
-    }
-  });
+  // app.js will redirect to dashboard if logged in
+  // If still on this page after 3s, show login form
+  window.__showAuthPage = function() {
+    hideLoading();
+    setTimeout(() => authEl?.classList.add('visible'), 50);
+    initParticles();
+    initTabs();
+  };
 
   function initParticles() {
     const c = document.getElementById('particles');
+    if (!c) return;
     const colors = ['rgba(0,255,136,.5)','rgba(0,170,255,.5)','rgba(168,85,247,.5)'];
     for (let i = 0; i < 12; i++) {
       const p = document.createElement('div');
@@ -617,9 +596,6 @@
         document.querySelectorAll('.tab-content').forEach(c => {
           if (c.dataset.tab === tab) {
             c.classList.remove('hidden');
-            c.classList.remove('tab-enter');
-            void c.offsetWidth;
-            c.classList.add('tab-enter');
           } else {
             c.classList.add('hidden');
           }

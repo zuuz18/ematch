@@ -31,7 +31,7 @@ import {
 // ── 1. FIREBASE CONFIG ─────────────────────────────────────
 const firebaseConfig = {
   apiKey: "AIzaSyAW921oL1KTEk5n75xWvfGWM4Ab1SKnpbg",
-  authDomain: "ematch8.netlify.app",
+  authDomain: "ematch-bb818.firebaseapp.com",
   databaseURL: "https://ematch-bb818-default-rtdb.firebaseio.com",
   projectId: "ematch-bb818",
   storageBucket: "ematch-bb818.firebasestorage.app",
@@ -353,16 +353,24 @@ async function handleGoogleSignIn() {
   const btns = ['btn_google','btn_google_reg'].map(id => document.getElementById(id)).filter(Boolean);
   btns.forEach(b => { b.disabled = true; b.style.opacity = '.6'; });
 
+  // Sign out first to clear any cached session — forces fresh account picker every time
+  try { await signOut(auth); } catch(e) {}
+
   const provider = new GoogleAuthProvider();
   provider.addScope('email');
   provider.addScope('profile');
   provider.setCustomParameters({ prompt: 'select_account' });
 
   try {
-    await signInWithRedirect(auth, provider);
-    // Page will reload — result handled by getRedirectResult below
+    const cred = await signInWithPopup(auth, provider);
+    await _handleGoogleCred(cred);
   } catch (err) {
     btns.forEach(b => { b.disabled = false; b.style.opacity = ''; });
+    if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') return;
+    if (err.code === 'auth/popup-blocked') {
+      try { await signInWithRedirect(auth, provider); } catch(e) { showToast('Google sign-in khalad: ' + e.message, 'error'); }
+      return;
+    }
     showToast('Google sign-in khalad: ' + err.message, 'error');
   }
 }
@@ -1320,7 +1328,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     // if no user, returns null and we show login page
     const user = await authGuard(false, 'dashboard.html');
     if (user) return; // redirect already fired — stop all execution
-    // ── No user logged in — wire up login page ──
+    // ── No user logged in — show login page ──
+    window.__showAuthPage?.();
+    // ── Wire up login page ──
     initPasswordToggles();
     document.getElementById('login-form')    ?.addEventListener('submit', handleLogin);
     document.getElementById('register-form') ?.addEventListener('submit', handleSignup);

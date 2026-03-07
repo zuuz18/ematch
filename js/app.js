@@ -1371,62 +1371,133 @@ function showPushPopup(a) {
     info: '#3b82f6', success: '#00e676', warning: '#ffd700', promo: '#a855f7', urgent: '#ef4444'
   };
   const col = COLORS[a.type] || '#3b82f6';
+  const icon = a.type==='success'?'🎉':a.type==='warning'?'⚠️':a.type==='promo'?'🎁':a.type==='urgent'?'🚨':'📢';
+  const textColor = (a.type==='warning') ? '#000' : '#fff';
 
-  // Remove existing popup
+  // Remove any existing popup
   document.getElementById('_push-popup')?.remove();
+
+  // Inject styles once
+  if (!document.getElementById('_push-popup-styles')) {
+    const s = document.createElement('style');
+    s.id = '_push-popup-styles';
+    s.textContent = `
+      @keyframes _pushOverlayIn  { from{opacity:0} to{opacity:1} }
+      @keyframes _pushOverlayOut { from{opacity:1} to{opacity:0} }
+      @keyframes _pushCardIn  { from{opacity:0;transform:translateY(40px) scale(.92)} to{opacity:1;transform:translateY(0) scale(1)} }
+      @keyframes _pushCardOut { from{opacity:1;transform:scale(1)} to{opacity:0;transform:scale(.88)} }
+      @keyframes _pushIconPop { 0%{transform:scale(0) rotate(-20deg)} 70%{transform:scale(1.2) rotate(5deg)} 100%{transform:scale(1) rotate(0)} }
+      @keyframes _pushRing {
+        0%   { transform:scale(1);   opacity:.6 }
+        100% { transform:scale(2.2); opacity:0  }
+      }
+      #_push-popup {
+        position:fixed;inset:0;z-index:99999;
+        display:flex;align-items:center;justify-content:center;
+        padding:20px;
+        background:rgba(0,0,0,.88);
+        backdrop-filter:blur(12px);
+        -webkit-backdrop-filter:blur(12px);
+        animation:_pushOverlayIn .25s ease forwards;
+      }
+      #_push-popup-card {
+        position:relative;
+        width:100%;max-width:340px;
+        background:#0d1117;
+        border-radius:24px;
+        padding:36px 28px 28px;
+        text-align:center;
+        box-shadow:0 0 0 1px rgba(255,255,255,.08), 0 30px 80px rgba(0,0,0,.8);
+        animation:_pushCardIn .4s cubic-bezier(.34,1.56,.64,1) forwards;
+        overflow:hidden;
+      }
+      #_push-popup-glow {
+        position:absolute;top:-60px;left:50%;transform:translateX(-50%);
+        width:200px;height:200px;border-radius:50%;
+        pointer-events:none;
+        filter:blur(50px);
+        opacity:.35;
+      }
+      #_push-popup-icon-wrap {
+        position:relative;
+        width:80px;height:80px;
+        margin:0 auto 20px;
+        display:flex;align-items:center;justify-content:center;
+      }
+      #_push-popup-ring {
+        position:absolute;inset:0;border-radius:50%;
+        border:2px solid var(--_pcol,#3b82f6);
+        animation:_pushRing 1.2s ease-out .3s forwards;
+      }
+      #_push-popup-icon-bg {
+        width:80px;height:80px;border-radius:50%;
+        display:flex;align-items:center;justify-content:center;
+        font-size:36px;
+        animation:_pushIconPop .5s cubic-bezier(.34,1.56,.64,1) .15s both;
+      }
+      #_push-popup-type-bar {
+        position:absolute;top:0;left:0;right:0;height:3px;border-radius:24px 24px 0 0;
+      }
+      #_push-popup-title {
+        font-size:20px;font-weight:800;color:#f0f6fc;
+        margin-bottom:10px;line-height:1.25;
+        letter-spacing:-.3px;
+      }
+      #_push-popup-body {
+        font-size:14px;color:rgba(240,246,252,.55);
+        line-height:1.6;margin-bottom:24px;
+      }
+      #_push-popup-close {
+        width:100%;padding:14px;border:none;border-radius:14px;
+        cursor:pointer;font-size:15px;font-weight:700;
+        font-family:inherit;letter-spacing:.2px;
+        transition:opacity .15s,transform .1s;
+      }
+      #_push-popup-close:active { opacity:.85;transform:scale(.97); }
+      #_push-popup-sent {
+        margin-top:12px;font-size:11px;color:rgba(240,246,252,.25);
+        letter-spacing:.5px;text-transform:uppercase;
+      }
+    `;
+    document.head.appendChild(s);
+  }
 
   const el = document.createElement('div');
   el.id = '_push-popup';
-  el.style.cssText = `
-    position:fixed;inset:0;z-index:9999;
-    display:flex;align-items:center;justify-content:center;
-    padding:24px;
-    background:rgba(0,0,0,0.82);
-    backdrop-filter:blur(8px);
-    animation:_pushIn .3s cubic-bezier(.34,1.56,.64,1) forwards;
-  `;
-
   el.innerHTML = `
-    <style>
-      @keyframes _pushIn{from{opacity:0;transform:scale(.85)}to{opacity:1;transform:scale(1)}}
-      @keyframes _pushOut{to{opacity:0;transform:scale(.9)}}
-      #_push-popup-card{
-        width:100%;max-width:360px;
-        background:#161b22;
-        border:1px solid rgba(255,255,255,.1);
-        border-top:3px solid ${col};
-        border-radius:16px;
-        padding:28px 24px 24px;
-        box-shadow:0 20px 60px rgba(0,0,0,.7);
-        text-align:center;
-      }
-      #_push-popup-icon{font-size:44px;margin-bottom:12px;line-height:1}
-      #_push-popup-title{font-size:18px;font-weight:800;color:#f0f6fc;margin-bottom:8px;line-height:1.3}
-      #_push-popup-body{font-size:14px;color:#8b949e;line-height:1.5;margin-bottom:20px}
-      #_push-popup-close{
-        width:100%;padding:12px;border:none;border-radius:10px;cursor:pointer;
-        font-size:14px;font-weight:700;
-        background:linear-gradient(135deg,${col},${col}cc);
-        color:${a.type==='warning'?'#000':'#fff'};
-      }
-    </style>
-    <div id="_push-popup-card">
-      <div id="_push-popup-icon">${
-        a.type==='success'?'🎉':a.type==='warning'?'⚠️':a.type==='promo'?'🎁':a.type==='urgent'?'🚨':'📢'
-      }</div>
+    <div id="_push-popup-card" style="--_pcol:${col}">
+      <div id="_push-popup-type-bar" style="background:${col}"></div>
+      <div id="_push-popup-glow" style="background:${col}"></div>
+      <div id="_push-popup-icon-wrap">
+        <div id="_push-popup-ring"></div>
+        <div id="_push-popup-icon-bg" style="background:${col}22">${icon}</div>
+      </div>
       <div id="_push-popup-title">${(a.title||'').replace(/</g,'&lt;')}</div>
       <div id="_push-popup-body">${(a.body||'').replace(/</g,'&lt;')}</div>
-      <button id="_push-popup-close">Xidh</button>
+      <button id="_push-popup-close"
+        style="background:linear-gradient(135deg,${col},${col}bb);color:${textColor}">
+        ✓ Xidh
+      </button>
+      <div id="_push-popup-sent">eMatch · Fariinta Rasmi ah</div>
     </div>
   `;
 
   document.body.appendChild(el);
-  document.getElementById('_push-popup-close').onclick = () => {
-    el.style.animation = '_pushOut .2s ease forwards';
-    setTimeout(() => el.remove(), 200);
+
+  // Close on button click
+  el.querySelector('#_push-popup-close').onclick = () => {
+    el.style.animation = '_pushOverlayOut .2s ease forwards';
+    el.querySelector('#_push-popup-card').style.animation = '_pushCardOut .2s ease forwards';
+    setTimeout(() => el.remove(), 220);
   };
-  // Auto-close after 30s
-  setTimeout(() => el?.remove(), 30000);
+
+  // Close on backdrop click
+  el.addEventListener('click', e => {
+    if (e.target === el) el.querySelector('#_push-popup-close').click();
+  });
+
+  // Auto-close after 60s
+  setTimeout(() => el?.isConnected && el.querySelector('#_push-popup-close')?.click(), 60000);
 }
 
 // ════════════════════════════════════════════════════════

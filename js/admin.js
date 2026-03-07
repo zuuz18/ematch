@@ -20,12 +20,14 @@
     });
   }
 
+  // Wait for both db+uid AND userdata (so role is available immediately)
   try { await waitFor(()=>window._ematch_db&&window._ematch_uid); }
   catch { console.error('admin.js: app.js init timeout'); return; }
 
   const {
-    collection, query, where, limit, orderBy,
-    getDocs, doc, getDoc, updateDoc, addDoc,
+    collection, query, where, limit,
+    getDocs, getDocsFromServer, getDocFromServer,
+    doc, getDoc, setDoc, updateDoc, addDoc,
     runTransaction, serverTimestamp, onSnapshot
   } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
 
@@ -36,19 +38,90 @@
   const uidEl = $('admin-uid-display');
   if (uidEl) uidEl.textContent = 'UID: ' + uid.slice(0,16) + '...';
 
-  // ── My role ─────────────────────────────────────────────
-  let myRole = 'administrator';
+  // ── My role + permissions ────────────────────────────────
+  let myRole  = 'administrator';
+  let myPerms = { stats: true, deposits: true, matches: true }; // defaults
+
+  // First try: use already-loaded userdata (fastest, no extra read)
+  const cached = window._ematch_userdata;
+  if (cached?.role) {
+    myRole = cached.role;
+    if (myRole !== 'owner' && cached.adminPerms) {
+      myPerms = {
+        stats:    cached.adminPerms.stats    !== false,
+        deposits: cached.adminPerms.deposits !== false,
+        matches:  cached.adminPerms.matches  !== false,
+      };
+    }
+  }
+
+  // Always verify with a fresh Firestore server read (bypass cache + stale localStorage role)
   try {
-    const snap = await getDoc(doc(db,'users',uid));
-    if (snap.exists()) myRole = snap.data().role || 'administrator';
-  } catch(e) {}
+    const snap = await getDocFromServer(doc(db,'users',uid));
+    if (snap.exists()) {
+      const d = snap.data();
+      myRole  = d.role || myRole;
+      if (myRole !== 'owner' && d.adminPerms) {
+        myPerms = {
+          stats:    d.adminPerms.stats    !== false,
+          deposits: d.adminPerms.deposits !== false,
+          matches:  d.adminPerms.matches  !== false,
+        };
+      } else if (myRole === 'owner') {
+        myPerms = { stats: true, deposits: true, matches: true };
+      }
+    }
+  } catch(e) {
+    console.warn('admin.js: role fetch failed, using cached:', myRole, e.message);
+  }
 
   const ADMIN_ROLES = ['owner','administrator','partner_manager','support','agent'];
 
-  // Show Users tab & panel for all admin roles
-  document.querySelectorAll('.owner-only').forEach(el => {
-    el.style.display = ADMIN_ROLES.includes(myRole) ? '' : 'none';
+  // ── Tab visibility based on permissions ─────────────────
+  const tabPerms = { stats: myPerms.stats, deposits: myPerms.deposits, matches: myPerms.matches };
+
+  // Owner: show everything including Users + Games tabs
+  // Others: show only permitted tabs
+  const ownerOnlyTabs = ['users', 'games'];
+  // Remove owner-only class from elements this role can see
+  // (CSS hides them by default, JS reveals them by removing class)
+  document.querySelectorAll('.admin-tab[data-tab]').forEach(tab => {
+    const t = tab.dataset.tab;
+    if (ownerOnlyTabs.includes(t)) {
+      if (myRole === 'owner') tab.classList.remove('owner-only');
+      else tab.style.display = 'none';
+    } else if (myRole !== 'owner') {
+      if (tabPerms[t] === false) tab.style.display = 'none';
+      else tab.style.display = '';
+    }
   });
+  document.querySelectorAll('.admin-panel[id^="panel-"]').forEach(panel => {
+    const t = panel.id.replace('panel-','');
+    if (ownerOnlyTabs.includes(t)) {
+      if (myRole === 'owner') panel.classList.remove('owner-only');
+      else panel.style.display = 'none';
+    } else if (myRole !== 'owner') {
+      if (tabPerms[t] === false) panel.style.display = 'none';
+    }
+  });
+
+  // Helper: can current user access this tab?
+  function canAccessTab(t) {
+    if (t === 'users' || t === 'games') return myRole === 'owner';
+    if (myRole === 'owner') return true;
+    return tabPerms[t] !== false;
+  }
+
+  // Switch to first visible tab (safe fallback)
+  const firstVisible = ['stats','deposits','matches','users','games'].find(canAccessTab) || null;
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+  if (firstVisible) {
+    const activeTab   = document.querySelector('.admin-tab[data-tab="' + firstVisible + '"]');
+    const activePanel = document.getElementById('panel-' + firstVisible);
+    if (activeTab)   activeTab.classList.add('active');
+    if (activePanel) activePanel.classList.add('active');
+  }
 
   // ── Shared helpers ──────────────────────────────────────
   let depFilter   = 'pending';
@@ -72,53 +145,65 @@
 
   // ── Tab switch ──────────────────────────────────────────
   window.switchTab = function(tab) {
+    // Block access to tabs without permission
+    if (!canAccessTab(tab)) { toast('Fasax kuma lihid tab kan', 'error'); return; }
     document.querySelectorAll('.admin-tab').forEach(t =>
       t.classList.toggle('active', t.dataset.tab===tab));
     document.querySelectorAll('.admin-panel').forEach(p =>
       p.classList.toggle('active', p.id==='panel-'+tab));
-    ({stats:loadStats, deposits:loadDeposits, matches:loadAdminMatches, users:loadUsers})[tab]?.();
+    ({stats:loadStats, deposits:loadDeposits, matches:loadAdminMatches, users:loadUsers, games:loadGamesPanel})[tab]?.();
   };
 
   // ══════════════════════════════════════════════════════════
   // STATS
   // ══════════════════════════════════════════════════════════
-  window.loadStats = async function() {
-    try {
-      const [usersSnap, matchesSnap, depSnap, txSnap] = await Promise.all([
-        getDocs(query(collection(db,'users'), limit(200))),
-        getDocs(query(collection(db,'matches'), limit(200))),
-        getDocs(query(collection(db,'deposit_requests'), where('status','==','pending'), limit(100))),
-        getDocs(query(collection(db,'transactions'), where('type','==','match_win'), limit(200)))
-      ]);
-      const totalCoins  = usersSnap.docs.reduce((s,d)=>s+(d.data().sosBalance||0)+(d.data().escrowSOS||0),0);
-      const liveMatches = matchesSnap.docs.filter(d=>d.data().status==='locked').length;
-      const pending     = depSnap.size;
+  const loadStats = window.loadStats = async function() {
+    // ── Fetch each collection individually so one failure doesn't break all ──
+    async function safeFetch(q) {
+      try { return await getDocs(q); } catch(e) { return { docs:[], size:0, empty:true }; }
+    }
 
-      const badge=$('dep-badge');
-      if(badge){badge.textContent=pending;badge.style.display=pending>0?'inline-flex':'none';}
+    const { getDocsFromServer: gds } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    async function safeServerFetch(q) {
+      try { return await gds(q); } catch(e) { return { docs:[], size:0, empty:true }; }
+    }
 
-      [['s-total-coins',totalCoins.toLocaleString()],['s-total-users',usersSnap.size],
-       ['s-total-matches',matchesSnap.size],['s-live-matches',liveMatches],
-       ['s-pending-deps',pending],['s-total-wins',txSnap.size]
-      ].forEach(([id,v])=>{const el=$(id);if(el)el.textContent=v;});
+    const [usersSnap, matchesSnap, depSnap, txSnap] = await Promise.all([
+      safeServerFetch(query(collection(db,'users'), limit(500))),
+      safeFetch(query(collection(db,'matches'), limit(200))),
+      safeFetch(query(collection(db,'deposit_requests'), where('status','==','pending'), limit(100))),
+      safeFetch(query(collection(db,'transactions'), where('type','==','match_win'), limit(200)))
+    ]);
 
-      const recentSnap = await getDocs(query(collection(db,'transactions'), limit(30)));
-      const actEl = $('recent-activity');
-      if(!actEl) return;
-      if(recentSnap.empty){actEl.innerHTML=empty('📭','Wax dhaqdhaqaaq ah ma jiro');return;}
-      const recent = sortByDate(recentSnap.docs.map(d=>d.data())).slice(0,10);
-      const icons  = {deposit_approved:'💰',escrow_lock:'🔒',match_win:'🏆',match_loss:'💸',send:'📤',receive:'📥'};
-      const labels = {deposit_approved:'Deposit la ogolaaday',escrow_lock:'Match escrow',match_win:'Match guul',match_loss:'Match khasaaro',send:'Coins la diray',receive:'Coins la helay'};
-      actEl.innerHTML = recent.map(t => {
-        const pos=(t.sos||0)>0;
-        const time=t.createdAt?.toDate?t.createdAt.toDate().toLocaleTimeString('so-SO',{hour:'2-digit',minute:'2-digit'}):'—';
-        return `<div class="tx-item" style="margin-bottom:var(--sp-sm)">
-          <div class="tx-icon">${icons[t.type]||'💫'}</div>
-          <div class="tx-info"><div class="tx-title">${labels[t.type]||t.type}</div><div class="tx-date">${(t.userId||'').slice(0,10)}... · ${time}</div></div>
-          <div class="tx-amount ${pos?'credit':'debit'}">${pos?'+':''}${(t.sos||0).toLocaleString()} </div>
-        </div>`;
-      }).join('');
-    } catch(err){console.error('loadStats:',err);}
+    const totalCoins  = usersSnap.docs.reduce((s,d)=>s+(d.data().sosBalance||0)+(d.data().escrowSOS||0),0);
+    const liveMatches = matchesSnap.docs.filter(d=>d.data().status==='locked').length;
+    const pending     = depSnap.size;
+
+    const badge=$('dep-badge');
+    if(badge){badge.textContent=pending;badge.style.display=pending>0?'inline-flex':'none';}
+
+    [['s-total-coins',totalCoins.toLocaleString()],['s-total-users',usersSnap.size],
+     ['s-total-matches',matchesSnap.size],['s-live-matches',liveMatches],
+     ['s-pending-deps',pending],['s-total-wins',txSnap.size]
+    ].forEach(([id,v])=>{const el=$(id);if(el)el.textContent=v;});
+
+    // ── Recent activity ──
+    const recentSnap = await safeFetch(query(collection(db,'transactions'), limit(50)));
+    const actEl = $('recent-activity');
+    if(!actEl) return;
+    if(recentSnap.empty){actEl.innerHTML=empty('📭','Wax dhaqdhaqaaq ah ma jiro');return;}
+    const recent = sortByDate(recentSnap.docs.map(d=>d.data())).slice(0,10);
+    const icons  = {deposit_approved:'💰',escrow_lock:'🔒',match_win:'🏆',match_loss:'💸',send:'📤',receive:'📥',admin_credit:'⚡',admin_debit:'🔧'};
+    const labels = {deposit_approved:'Deposit la ogolaaday',escrow_lock:'Match escrow',match_win:'Match guul',match_loss:'Match khasaaro',send:'Coins la diray',receive:'Coins la helay',admin_credit:'Admin Credit',admin_debit:'Admin Debit'};
+    actEl.innerHTML = recent.map(t => {
+      const pos=(t.sos||0)>0;
+      const time=t.createdAt?.toDate?t.createdAt.toDate().toLocaleTimeString('so-SO',{hour:'2-digit',minute:'2-digit'}):'—';
+      return `<div class="tx-item" style="margin-bottom:var(--sp-sm)">
+        <div class="tx-icon">${icons[t.type]||'💫'}</div>
+        <div class="tx-info"><div class="tx-title">${labels[t.type]||t.type}</div><div class="tx-date">${(t.userId||'').slice(0,10)}... · ${time}</div></div>
+        <div class="tx-amount ${pos?'credit':'debit'}">${pos?'+':''}${(t.sos||0).toLocaleString()} </div>
+      </div>`;
+    }).join('');
   };
 
   // ══════════════════════════════════════════════════════════
@@ -130,7 +215,7 @@
     loadDeposits();
   };
 
-  window.loadDeposits = async function() {
+  const loadDeposits = window.loadDeposits = async function() {
     const list=$('deposits-list'); if(!list) return;
     list.innerHTML=empty('⏳','La soo qaadayaa...');
     try {
@@ -201,7 +286,7 @@
     loadAdminMatches();
   };
 
-  window.loadAdminMatches = async function() {
+  const loadAdminMatches = window.loadAdminMatches = async function() {
     const list=$('matches-admin-list'); if(!list) return;
     list.innerHTML=empty('⏳','La soo qaadayaa...');
     try {
@@ -225,7 +310,16 @@
             ${(isLive||isDispute)&&m.createdBy&&m.joinedBy?`
               ${isDispute?`<div style="background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.3);border-radius:var(--r-sm);padding:var(--sp-sm);margin-bottom:var(--sp-sm)">
                 <div style="font-size:12px;font-weight:700;color:#ef4444;margin-bottom:4px">⚠️ Khilaaf — Admin go'aan qaado</div>
-                <div style="font-size:11px;color:var(--text-muted)">P1: ${m.createdByUsername||m.createdBy.slice(0,8)+'...'} | P2: ${m.joinedByUsername||m.joinedBy.slice(0,8)+'...'}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px">P1: ${m.createdByUsername||m.createdBy.slice(0,8)+'...'} | P2: ${m.joinedByUsername||m.joinedBy.slice(0,8)+'...'}</div>
+                ${m.result?.screenshotUrl?`
+                <a href="${m.result.screenshotUrl}" target="_blank" style="display:block;margin-top:4px">
+                  <img src="${m.result.screenshotUrl}" alt="Screenshot"
+                    style="width:100%;max-height:140px;object-fit:cover;border-radius:6px;border:1px solid rgba(239,68,68,.3);cursor:pointer">
+                  <div style="font-size:10px;color:var(--text-muted);margin-top:2px">📸 Screenshot fur</div>
+                </a>`:'<div style="font-size:10px;color:var(--text-muted)">📸 Screenshot la ma gelin</div>'}
+                ${m.result?.aiResult?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px">
+                  🤖 AI: ${m.result.aiResult.winner||'?'} · confidence: ${m.result.aiResult.confidence||'?'}
+                </div>`:''}
               </div>`:'<div style="font-size:12px;color:var(--text-muted);font-weight:700;margin-bottom:var(--sp-sm)">🏆 Winner Dooro:</div>'}
               <div class="vs-row">
                 <div class="vs-player" onclick="selectWinner('${m.id}','${m.createdBy}',this)">
@@ -348,8 +442,11 @@
         :ADMIN_ROLES.includes(u.role)
           ?'linear-gradient(135deg,var(--admin-purple),var(--admin-blue))'
           :'linear-gradient(135deg,#374151,#1f2937)';
+      const avContent = u.photoURL
+        ? `<img src="${u.photoURL}" alt="${ini}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`
+        : ini;
       return `<div class="um-user-card" style="animation:statIn .2s var(--ease) ${Math.min(i*.03,.4)}s both" onclick="openUserDetail('${u.id}')">
-        <div class="um-avatar" style="background:${avBg}">${ini}${online?'<div class="um-online-pip"></div>':''}</div>
+        <div class="um-avatar" style="background:${u.photoURL?'transparent':avBg}">${avContent}${online?'<div class="um-online-pip"></div>':''}</div>
         <div class="um-info">
           <div class="um-name">${u.fullName||'—'}</div>
           <div class="um-email">${u.email||u.phone||(u.id||'').slice(0,20)+'...'}</div>
@@ -378,21 +475,32 @@
     userSearch=''; renderUsers(getFilteredUsers());
   };
 
-  window.loadUsers = function() {
+  const loadUsers = window.loadUsers = async function() {
     const listEl=$('users-list'); if(!listEl) return;
     if(usersUnsub){usersUnsub();usersUnsub=null;}
     const ri=$('um-refresh-icon');
     if(ri){ri.style.animation='udSpin .7s linear';setTimeout(()=>ri.style.animation='',800);}
     listEl.innerHTML=empty('⏳','La soo qaadayaa...');
-    usersUnsub=onSnapshot(
-      query(collection(db,'users'),limit(500)),
-      snap=>{
-        allUsers=snap.docs.map(d=>({id:d.id,...d.data()}));
-        updateUserStatsBanner();
-        renderUsers(getFilteredUsers());
-      },
-      err=>{ if(listEl) listEl.innerHTML=empty('❌',err.message); }
-    );
+    try {
+      // Force server fetch first (bypass cache)
+      const { getDocsFromServer } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+      const snap = await getDocsFromServer(query(collection(db,'users'),limit(500)));
+      allUsers = snap.docs.map(d=>({id:d.id,...d.data()}));
+      updateUserStatsBanner();
+      renderUsers(getFilteredUsers());
+      // Then subscribe for live updates
+      usersUnsub = onSnapshot(
+        query(collection(db,'users'),limit(500)),
+        s=>{
+          allUsers=s.docs.map(d=>({id:d.id,...d.data()}));
+          updateUserStatsBanner();
+          renderUsers(getFilteredUsers());
+        },
+        err=>{ if(listEl) listEl.innerHTML=empty('❌',err.message); }
+      );
+    } catch(err) {
+      if(listEl) listEl.innerHTML=empty('❌',err.message);
+    }
   };
 
   // ── User detail bottom sheet ─────────────────────────────
@@ -405,7 +513,7 @@
     try {
       const [uSnap,txSnap]=await Promise.all([
         getDoc(doc(db,'users',userId)),
-        getDocs(query(collection(db,'transactions'),where('userId','==',userId),orderBy('createdAt','desc'),limit(10)))
+        getDocs(query(collection(db,'transactions'),where('userId','==',userId),limit(50)))
       ]);
       if(!uSnap.exists()){body.innerHTML='<p style="padding:var(--sp-md)">User la ma helin</p>';return;}
       const u={id:userId,...uSnap.data()};
@@ -415,6 +523,11 @@
       const seenMs=(u.lastSeen?.toMillis?.())||((u.lastSeen?.seconds||0)*1000);
       const lastSeen=seenMs?new Date(seenMs).toLocaleString('so-SO'):'—';
       const wins=txSnap.docs.filter(d=>d.data().type==='match_win').length;
+      const txDocs=[...txSnap.docs].sort((a,b)=>{
+        const at=a.data().createdAt?.toMillis?.()||(a.data().createdAt?.seconds||0)*1000;
+        const bt=b.data().createdAt?.toMillis?.()||(b.data().createdAt?.seconds||0)*1000;
+        return bt-at;
+      }).slice(0,10);
       const fmt=window.sosFormat||(n=>n.toLocaleString());
 
       const availRoles=myRole==='owner'
@@ -427,8 +540,8 @@
 
       const txIcons={deposit_approved:'💰',escrow_lock:'🔒',match_win:'🏆',match_loss:'💸',send:'📤',receive:'📥',admin_credit:'⚡',admin_debit:'🔧'};
       const txLabels={deposit_approved:'Deposit',escrow_lock:'Escrow',match_win:'Guul',match_loss:'Khasaaro',send:'La diray',receive:'La helay',admin_credit:'Admin+',admin_debit:'Admin−'};
-      const txHtml=txSnap.docs.length
-        ?txSnap.docs.map(d=>{
+      const txHtml=txDocs.length
+        ?txDocs.map(d=>{
             const t=d.data(),cr=(t.sos||0)>0,dt=t.createdAt?.toDate?t.createdAt.toDate().toLocaleDateString('so-SO'):'—';
             return `<div class="ud-tx-mini"><div class="ud-tx-icon">${txIcons[t.type]||'💫'}</div><div class="ud-tx-info"><div class="ud-tx-lbl">${txLabels[t.type]||t.type}</div><div class="ud-tx-date">${dt}</div></div><div class="ud-tx-amt ${cr?'cr':'dr'}">${cr?'+':''}${fmt(t.sos||0)}</div></div>`;
           }).join('')
@@ -440,12 +553,16 @@
           ?'background:linear-gradient(135deg,var(--admin-purple),var(--admin-blue));color:#fff'
           :'background:linear-gradient(135deg,var(--admin-green),var(--admin-blue));color:#000';
 
+      const avHtml = u.photoURL
+        ? `<div class="ud-av-lg" style="overflow:hidden;padding:0"><img src="${u.photoURL}" alt="avatar" style="width:100%;height:100%;object-fit:cover;border-radius:50%"></div>`
+        : `<div class="ud-av-lg" style="${avBg}">${ini}</div>`;
+
       body.innerHTML=`
         <div style="position:relative">
           <div class="ud-cover"></div>
           <button class="ud-close-btn" onclick="closeUserDetail()">✕</button>
           <div class="ud-av-zone">
-            <div class="ud-av-lg" style="${avBg}">${ini}</div>
+            ${avHtml}
             <div class="ud-id">
               <div class="ud-id-name">${u.fullName||'—'}</div>
               <div class="ud-id-email">${u.email||'—'}</div>
@@ -561,6 +678,125 @@
   window.udSuspend = function(userId,name) {
     if(!confirm(`🚫 User suspend garee?\n${name}`)) return;
     udSetRole(userId,'suspended','🚫 Suspended');
+  };
+
+  // ══════════════════════════════════════════════════════════
+  // GAMES SETTINGS PANEL
+  // ══════════════════════════════════════════════════════════
+  let _gseData = null; // local editable copy
+
+  const loadGamesPanel = window.loadGamesPanel = async function() {
+    const gamesList  = $('gs-games-list');
+    const presets    = $('gs-presets-list');
+    const minInput   = $('gs-min-stake');
+    const maxInput   = $('gs-max-stake');
+    if (!gamesList) return;
+    gamesList.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">⏳</div>';
+    try {
+      const snap = await getDoc(doc(db,'game_settings','config'));
+      _gseData = snap.exists() ? JSON.parse(JSON.stringify(snap.data())) : {
+        games: [
+          {id:'FC Mobile',  name:'FC Mobile',   emoji:'⚽', active:true},
+          {id:'FIFA',       name:'FIFA',         emoji:'⚽', active:true},
+          {id:'eFootball',  name:'eFootball',    emoji:'⚽', active:true},
+          {id:'NBA 2K',     name:'NBA 2K',       emoji:'🏀', active:true},
+          {id:'PUBG',       name:'PUBG Mobile',  emoji:'🔫', active:true},
+          {id:'Free Fire',  name:'Free Fire',    emoji:'🔫', active:true},
+          {id:'COD',        name:'COD Mobile',   emoji:'🔫', active:true},
+        ],
+        stakePresets: [10000, 25000, 50000, 100000],
+        minStake: 8000,
+        maxStake: 0
+      };
+    } catch(e) { gamesList.innerHTML = '<p style="color:var(--admin-red);padding:12px">Khalad: ' + e.message + '</p>'; return; }
+
+    if (minInput) minInput.value = _gseData.minStake || 8000;
+    if (maxInput) maxInput.value = _gseData.maxStake || 0;
+    gseRenderPresets();
+    gseRenderGames();
+  };
+
+  function gseRenderPresets() {
+    const el = $('gs-presets-list'); if (!el) return;
+    const presets = _gseData.stakePresets || [];
+    el.innerHTML = presets.map((p,i) =>
+      `<div class="gs-preset-item">
+        <span class="gs-preset-val">${p>=1000000?(p/1000000).toFixed(1)+'M':p>=1000?Math.round(p/1000)+'K':p} SOS</span>
+        <button class="gs-preset-del" onclick="gseRemovePreset(${i})">✕</button>
+      </div>`
+    ).join('') || '<span style="color:var(--text-muted);font-size:12px">Preset ma jiro</span>';
+  }
+
+  function gseRenderGames() {
+    const el = $('gs-games-list'); if (!el) return;
+    const games = _gseData.games || [];
+    el.innerHTML = games.map((g,i) =>
+      `<div class="gs-game-item">
+        <input class="gs-game-emoji-inp" type="text" value="${g.emoji||'🎮'}" maxlength="2"
+          oninput="_gseData.games[${i}].emoji=this.value" title="Emoji">
+        <input class="gs-game-name-inp" type="text" value="${g.name||''}" placeholder="Game magac..."
+          oninput="_gseData.games[${i}].name=this.value;_gseData.games[${i}].id=this.value">
+        <label class="gs-game-toggle" title="${g.active!==false?'Active':'Hidden'}">
+          <input type="checkbox" ${g.active!==false?'checked':''} onchange="_gseData.games[${i}].active=this.checked">
+          <span class="gs-slider"></span>
+        </label>
+        <button class="gs-game-del" onclick="gseRemoveGame(${i})" title="Tirtir">🗑️</button>
+      </div>`
+    ).join('') || '<p style="color:var(--text-muted);font-size:13px;padding:8px">Game ma jiro</p>';
+  }
+
+  window.gseAddPreset = function() {
+    const val = parseInt(prompt('Preset amount (SOS):'));
+    if (!val || val < 1) return;
+    if (!_gseData.stakePresets) _gseData.stakePresets = [];
+    _gseData.stakePresets.push(val);
+    _gseData.stakePresets.sort((a,b) => a-b);
+    gseRenderPresets();
+  };
+
+  window.gseRemovePreset = function(i) {
+    _gseData.stakePresets.splice(i, 1);
+    gseRenderPresets();
+  };
+
+  window.gseAddGame = function() {
+    if (!_gseData.games) _gseData.games = [];
+    _gseData.games.push({ id:'Game Cusub', name:'Game Cusub', emoji:'🎮', active:true });
+    gseRenderGames();
+  };
+
+  window.gseRemoveGame = function(i) {
+    if (!confirm('Game-kan tirtir?')) return;
+    _gseData.games.splice(i, 1);
+    gseRenderGames();
+  };
+
+  window.gseSaveAll = async function() {
+    if (!_gseData) return;
+    const btn = $('gs-save-btn');
+    if (btn) { btn.textContent = '⏳ Kaydinayaa...'; btn.disabled = true; }
+    try {
+      // Read inputs
+      _gseData.minStake = parseInt($('gs-min-stake')?.value) || 8000;
+      _gseData.maxStake = parseInt($('gs-max-stake')?.value) || 0;
+      // Clean games — remove empty names
+      _gseData.games = (_gseData.games || []).filter(g => g.name?.trim());
+      // Sort presets
+      _gseData.stakePresets = (_gseData.stakePresets || []).sort((a,b) => a-b);
+
+      // Use setDoc (merge) — works whether doc exists or not
+      await setDoc(doc(db,'game_settings','config'), _gseData);
+
+      await addDoc(collection(db,'adminLogs'), {
+        action:'update_game_settings', adminUid:uid,
+        createdAt:serverTimestamp(), meta:{ gamesCount: _gseData.games.length }
+      });
+
+      toast('✅ Game settings la keydsaday!', 'success');
+      gseRenderPresets();
+      gseRenderGames();
+    } catch(e) { toast('Khalad: ' + e.message, 'error'); }
+    finally { if (btn) { btn.textContent = '💾 Kaydi'; btn.disabled = false; } }
   };
 
   // ── Init ────────────────────────────────────────────────

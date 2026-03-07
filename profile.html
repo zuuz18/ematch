@@ -87,6 +87,24 @@
       border: 3px solid var(--bg-base);
       box-shadow: 0 0 8px rgba(0,230,118,.6);
     }
+    .avatar-upload-btn {
+      position: absolute;
+      bottom: 0; right: -2px;
+      width: 28px; height: 28px;
+      background: var(--accent-blue);
+      border-radius: 50%;
+      border: 2px solid var(--bg-base);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,.4);
+      z-index: 3; transition: transform .15s;
+    }
+    .avatar-upload-btn:active { transform: scale(.9); }
+    .profile-avatar-lg img {
+      width: 100%; height: 100%;
+      border-radius: 50%; object-fit: cover;
+    }
+    .avatar-uploading { opacity: .6; pointer-events: none; }
 
     /* ── Win-rate ring ──────────────────────────────────── */
     .wr-ring-track { fill: none; stroke: rgba(255,255,255,.06); stroke-width: 5; }
@@ -414,6 +432,12 @@
             </svg>
             <div class="profile-avatar-lg" id="profile-avatar-display">?</div>
             <div class="online-dot" title="Online"></div>
+            <!-- Avatar upload button -->
+            <label class="avatar-upload-btn" title="Sawir bedel" id="avatar-upload-label">
+              📷
+              <input type="file" accept="image/*" style="display:none" id="avatar-file-input"
+                onchange="uploadProfilePhoto(this.files[0])">
+            </label>
           </div>
 
           <div style="margin-top:6px">
@@ -609,8 +633,8 @@
             </div>
             <svg class="settings-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
           </div>
-          <!-- User Management -->
-          <div class="settings-item" id="menu_admin_users" onclick="window.location.href='users.html'" style="cursor:pointer">
+          <!-- User Management — owner kaliya -->
+          <div class="settings-item hidden" id="menu_admin_users" onclick="window.location.href='users.html'" style="cursor:pointer">
             <div class="settings-icon" style="background:rgba(255,215,0,.08)">👥</div>
             <div class="settings-text">
               <div class="settings-title">User Management</div>
@@ -908,12 +932,67 @@
     const adminSection = document.getElementById('admin-menu-section');
     if (adminSection) adminSection.classList.toggle('hidden', !isAdmin);
 
-    // Show Admin Dashboard link only for owner / administrator
+    // Admin Dashboard — owner + administrator kaliya
     const canSeeAdminDash = ['owner','administrator'].includes(u.role);
     document.querySelectorAll('.settings-item.admin-only').forEach(el => {
       el.classList.toggle('hidden', !canSeeAdminDash);
     });
+
+    // User Management — owner kaliya
+    const userMgmtEl = document.getElementById('menu_admin_users');
+    if (userMgmtEl) userMgmtEl.classList.toggle('hidden', u.role !== 'owner');\n
+
+    // ── Avatar / photo display ─────────────────────────────
+    const avEl = document.getElementById('profile-avatar-display');
+    if (avEl) {
+      if (u.photoURL) {
+        avEl.innerHTML = `<img src="${u.photoURL}" alt="Avatar" onerror="this.parentElement.textContent='${initials}'">`;
+        avEl.style.background = 'transparent';
+        avEl.style.fontSize = '0';
+      } else {
+        avEl.innerHTML = initials;
+        avEl.style.background = '';
+        avEl.style.fontSize = '';
+      }
+    }
   }
+
+  // ── Profile Photo Upload ───────────────────────────────
+  window.uploadProfilePhoto = async function(file) {
+    if (!file) return;
+    const fb  = getFirebase();
+    const uid = window._ematch_uid;
+    if (!fb || !uid) return;
+    const label = document.getElementById('avatar-upload-label');
+    const avEl  = document.getElementById('profile-avatar-display');
+    if (label) label.classList.add('avatar-uploading');
+    if (avEl)  avEl.classList.add('avatar-uploading');
+    try {
+      // Upload to imgbb
+      if (!window.uploadToImgbb) throw new Error('imgbb loader ma jiro');
+      const imgData = await window.uploadToImgbb(file, `avatar_${uid}_${Date.now()}`);
+      // Save to Firestore
+      const { updateDoc, doc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+      await updateDoc(doc(fb.db, 'users', uid), {
+        photoURL:      imgData.url,
+        photoThumb:    imgData.thumb || imgData.url,
+        photoUpdatedAt: new Date().toISOString()
+      });
+      window._ematch_userdata = { ...window._ematch_userdata, photoURL: imgData.url };
+      // Show new photo immediately
+      if (avEl) {
+        avEl.innerHTML = `<img src="${imgData.url}" alt="Avatar">`;
+        avEl.style.background = 'transparent';
+        avEl.style.fontSize = '0';
+      }
+      toast('✅ Sawirka la beddelay!', 'success');
+    } catch(err) {
+      toast('Khalad: ' + err.message, 'error');
+    } finally {
+      if (label) label.classList.remove('avatar-uploading');
+      if (avEl)  avEl.classList.remove('avatar-uploading');
+    }
+  };
 
   // ── Stats ──────────────────────────────────────────────
   async function loadStats(uid) {
@@ -1270,20 +1349,36 @@
     if (nsEl) nsEl.textContent = notifOn ? '✅ Shidan' : 'Dammaanad socod';
 
     // Wait for app.js to populate user data
-    const pollUser = setInterval(() => {
+    const pollUser = setInterval(async () => {
       const u = window._ematch_userdata;
-      if (u) {
+      const uid = window._ematch_uid;
+      if (u && uid) {
         clearInterval(pollUser);
-        fillUI(u);
-        loadStats(window._ematch_uid);
 
-        // Live balance listener
+        // Always fetch fresh data from Firestore (bypass cache/stale role)
         const fb = getFirebase();
-        if (fb && window._ematch_uid) {
-          onSnapshot(doc(fb.db,'users', window._ematch_uid), snap => {
+        let freshUser = u;
+        if (fb) {
+          try {
+            const snap = await getDoc(doc(fb.db, 'users', uid));
             if (snap.exists()) {
-              const fresh = snap.data();
+              freshUser = { ...snap.data(), uid };
+              window._ematch_userdata = freshUser;
+            }
+          } catch(_) {}
+        }
+
+        fillUI(freshUser);
+        loadStats(uid);
+
+        // Live balance + role listener
+        if (fb && uid) {
+          onSnapshot(doc(fb.db,'users', uid), snap => {
+            if (snap.exists()) {
+              const fresh = { ...snap.data(), uid };
               window._ematch_userdata = fresh;
+              // Re-run fillUI so role-based sections (Admin Tools, User Management) always update
+              fillUI(fresh);
               const sCoin = document.getElementById('stat-coins');
               const sEsc  = document.getElementById('stat-escrow');
               if (sCoin) sCoin.textContent = fmt(fresh.sosBalance||0);

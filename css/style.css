@@ -719,3 +719,124 @@ select{cursor:pointer}
   color: #00e676;
   border: 1px solid rgba(0,230,118,.25);
 }
+
+/* ══════════════════════════════════════════════════════════
+   CREATE MATCH MODAL — Casri ah
+   ══════════════════════════════════════════════════════════ */
+
+.cm-sheet { padding: 0 !important; overflow: hidden; }
+
+.cm-header {
+  position: relative;
+  padding: var(--sp-lg) var(--sp-lg) var(--sp-md);
+  overflow: hidden;
+  background: linear-gradient(135deg, rgba(0,230,118,.08), rgba(59,130,246,.06));
+  border-bottom: 1px solid var(--glass-border);
+}
+.cm-header-glow {
+  position: absolute; top: -40px; right: -20px;
+  width: 160px; height: 160px;
+  background: radial-gradient(circle, rgba(0,230,118,.15), transparent 70%);
+  pointer-events: none;
+}
+.cm-header-content { display: flex; align-items: center; gap: var(--sp-md); }
+.cm-header-icon {
+  font-size: 36px; line-height: 1;
+  filter: drop-shadow(0 0 12px rgba(0,230,118,.4));
+  transition: all .3s var(--ease);
+}
+.cm-title { font-size: 18px; font-weight: 700; color: var(--text-primary); }
+.cm-subtitle { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+/* Section */
+.cm-section {
+  padding: var(--sp-md) var(--sp-lg);
+  border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.cm-section:last-of-type { border-bottom: none; }
+.cm-section-label {
+  font-size: 10px; font-weight: 700; letter-spacing: .1em;
+  color: var(--text-muted); margin-bottom: var(--sp-sm);
+  text-transform: uppercase;
+}
+
+/* Games grid */
+.cm-games-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.cm-loading-games {
+  grid-column: 1/-1;
+  text-align: center; padding: 20px;
+  color: var(--text-muted); font-size: 13px;
+}
+.cm-game-btn {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 4px; padding: 12px 6px;
+  background: var(--bg-card2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-md);
+  cursor: pointer; transition: all .2s var(--ease);
+  color: var(--text-secondary); font-size: 11px; font-weight: 600;
+  text-align: center; line-height: 1.2;
+}
+.cm-game-btn .cm-game-emoji { font-size: 24px; line-height: 1; }
+.cm-game-btn:active { transform: scale(.95); }
+.cm-game-btn.selected {
+  border-color: var(--accent-green);
+  background: rgba(0,230,118,.08);
+  color: var(--accent-green);
+  box-shadow: 0 0 12px rgba(0,230,118,.2);
+}
+
+/* Quick stake buttons */
+.cm-stake-btns {
+  display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px;
+}
+.cm-stake-pill {
+  padding: 5px 12px;
+  background: var(--bg-card2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-full);
+  font-size: 11px; font-weight: 700; color: var(--text-secondary);
+  cursor: pointer; transition: all .15s var(--ease);
+  white-space: nowrap;
+}
+.cm-stake-pill:active { transform: scale(.94); }
+.cm-stake-pill.selected {
+  border-color: var(--accent-gold);
+  background: rgba(255,215,0,.08);
+  color: var(--accent-gold);
+}
+.cm-stake-range {
+  font-size: 10px; color: var(--accent-blue);
+  font-weight: 500; margin-left: 4px; text-transform: none; letter-spacing: 0;
+}
+.cm-balance-hint {
+  font-size: 12px; color: var(--text-muted); margin-top: 6px;
+}
+.cm-bal-val { color: var(--accent-green); }
+
+/* Prize preview */
+.cm-prize-preview {
+  margin: 0 var(--sp-lg) var(--sp-sm);
+  background: rgba(255,215,0,.05);
+  border: 1px solid rgba(255,215,0,.15);
+  border-radius: var(--r-md);
+  padding: var(--sp-sm) var(--sp-md);
+}
+.cm-prize-row {
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 12px; color: var(--text-secondary); padding: 3px 0;
+}
+.cm-prize-val { font-weight: 700; color: var(--text-primary); }
+.cm-prize-val.green { color: var(--accent-green); }
+
+.cm-submit-btn {
+  margin: var(--sp-sm) var(--sp-lg) var(--sp-lg);
+  width: calc(100% - var(--sp-lg)*2);
+  padding: 14px;
+  font-size: 15px; font-weight: 700;
+  border-radius: var(--r-lg);
+}

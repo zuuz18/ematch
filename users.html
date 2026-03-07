@@ -609,6 +609,13 @@ onAuthStateChanged(auth, async user => {
     return;
   }
 
+  // User Management — owner kaliya
+  if (myRole !== 'owner') {
+    toast('🚫 Boggan owner kaliya ayuu arki karaa','error');
+    setTimeout(()=>window.location.replace('dashboard.html'),1500);
+    return;
+  }
+
   startListen();
 });
 
@@ -953,6 +960,31 @@ window.openDetail = async (uid) => {
         </div>
       </div>
 
+      <!-- Admin Permissions — shaqaalaha admin role leh kaliya -->
+      ${ADMIN_ROLES.includes(u.role) && u.role !== 'owner' ? `
+      <div class="action-section" id="perms-section-${uid}">
+        <div class="action-section-title">🔐 Admin Permissions</div>
+        <div style="background:var(--bg-card2);border:1px solid var(--glass-border);border-radius:var(--r-md);overflow:hidden">
+          ${['stats','deposits','matches'].map(tab => {
+            const labels = {stats:'📊 Stats', deposits:'💰 Deposits', matches:'🎮 Matches'};
+            const cur = u.adminPerms?.[tab] !== false;
+            return `<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.04)">
+              <span style="font-size:13px;font-weight:600">${labels[tab]}</span>
+              <button
+                id="perm-${uid}-${tab}"
+                onclick="togglePerm('${uid}','${tab}',this)"
+                style="padding:5px 14px;border-radius:99px;font-size:11px;font-weight:800;cursor:pointer;border:1.5px solid;transition:all .15s;
+                  ${cur
+                    ? 'background:rgba(0,230,118,.1);border-color:rgba(0,230,118,.3);color:var(--accent-green)'
+                    : 'background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25);color:var(--accent-red)'
+                  }">
+                ${cur ? '✅ Furan' : '🚫 Xidhan'}
+              </button>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>` : ''}
+
       <!-- Transaction history -->
       <div class="action-section">
         <div class="action-section-title">📋 Transactionyada Dambe</div>
@@ -1039,6 +1071,34 @@ window.sendPwdReset = async (email) => {
   try {
     await sendPasswordResetEmail(auth, email);
     toast('✅ Password reset email la diray!','success');
+  } catch(err) { toast('Khalad: '+err.message,'error'); }
+};
+
+// ── Admin Permissions toggle ─────────────────────────────
+window.togglePerm = async (uid, tab, btn) => {
+  try {
+    const uSnap = await getDoc(doc(db,'users',uid));
+    if (!uSnap.exists()) return;
+    const cur = uSnap.data().adminPerms || {};
+    const wasOn = cur[tab] !== false;
+    const newVal = !wasOn;
+    await updateDoc(doc(db,'users',uid), {
+      [`adminPerms.${tab}`]: newVal
+    });
+    // Update button instantly
+    if (newVal) {
+      btn.textContent = '✅ Furan';
+      btn.style.cssText = 'padding:5px 14px;border-radius:99px;font-size:11px;font-weight:800;cursor:pointer;border:1.5px solid;transition:all .15s;background:rgba(0,230,118,.1);border-color:rgba(0,230,118,.3);color:var(--accent-green)';
+    } else {
+      btn.textContent = '🚫 Xidhan';
+      btn.style.cssText = 'padding:5px 14px;border-radius:99px;font-size:11px;font-weight:800;cursor:pointer;border:1.5px solid;transition:all .15s;background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.25);color:var(--accent-red)';
+    }
+    // Log
+    await addDoc(collection(db,'adminLogs'), {
+      action:'change_perm', adminUid:myUid, targetUserId:uid,
+      tab, newVal, createdAt:serverTimestamp()
+    });
+    toast(`✅ ${tab} permission ${newVal ? 'la furay' : 'la xidhay'}!`, 'success');
   } catch(err) { toast('Khalad: '+err.message,'error'); }
 };
 

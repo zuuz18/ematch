@@ -13,6 +13,8 @@ import {
   sendPasswordResetEmail,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   browserLocalPersistence,
   setPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -53,6 +55,31 @@ window._ematch_config   = firebaseConfig;
 window._ematch_db       = db;
 window._ematch_uid      = null;
 window._ematch_userdata = null;
+
+// ── IMGBB UPLOAD UTILITY ───────────────────────────────────
+const IMGBB_KEY = 'e40ca77f38c298d7f8d5c1dde3893f91';
+
+window.uploadToImgbb = async function(file, name) {
+  const formData = new FormData();
+  formData.append('image', file);
+  if (name) formData.append('name', name);
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${IMGBB_KEY}`, {
+    method: 'POST', body: formData
+  });
+  if (!res.ok) throw new Error('imgbb upload failed: ' + res.status);
+  const json = await res.json();
+  if (!json.success) throw new Error(json.error?.message || 'imgbb error');
+  return {
+    url:       json.data.url,         // direct image url
+    thumb:     json.data.thumb?.url,  // thumbnail
+    display:   json.data.display_url, // display url
+    deleteUrl: json.data.delete_url,  // delete link
+    id:        json.data.id,
+    size:      json.data.size,
+    title:     json.data.title
+  };
+};
+
 
 // ── 4. UTILITIES ───────────────────────────────────────────
 function setLoading(btn, loading) {
@@ -323,24 +350,50 @@ async function handleLogin(e) {
 async function handleGoogleSignIn() {
   if (!requireOnline()) return;
   const provider = new GoogleAuthProvider();
+  provider.addScope('email');
+  provider.addScope('profile');
+  // Mobile/Netlify: use redirect (popup blocks on mobile browsers)
+  const isMobile = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent);
   try {
-    const cred    = await signInWithPopup(auth, provider);
-    const uid     = cred.user.uid;
-    const userRef = doc(db, 'users', uid);
-    const snap    = await getDoc(userRef);
-    if (!snap.exists()) {
-      await setDoc(userRef, {
-        uid, fullName: cred.user.displayName || '',
-        email: cred.user.email || '', phone: '',
-        role: 'user', sosBalance: 0, escrowSOS: 0,
-        createdAt: serverTimestamp()
-      });
+    if (isMobile) {
+      await signInWithRedirect(auth, provider);
+      // Page will reload — result handled in onAuthStateChanged
+    } else {
+      const cred = await signInWithPopup(auth, provider);
+      await _handleGoogleCred(cred);
     }
-    window.location.replace('dashboard.html');
   } catch (err) {
-    if (err.code !== 'auth/popup-closed-by-user')
+    if (err.code === 'auth/popup-blocked') {
+      // Popup blocked — fall back to redirect
+      await signInWithRedirect(auth, provider);
+    } else if (err.code !== 'auth/popup-closed-by-user') {
       showToast('Google sign-in khalad: ' + err.message, 'error');
+    }
   }
+}
+
+async function _handleGoogleCred(cred) {
+  if (!cred?.user) return;
+  const uid     = cred.user.uid;
+  const userRef = doc(db, 'users', uid);
+  const snap    = await getDoc(userRef);
+  if (!snap.exists()) {
+    await setDoc(userRef, {
+      uid,
+      fullName:  cred.user.displayName || '',
+      email:     cred.user.email || '',
+      phone:     '',
+      photoURL:  cred.user.photoURL || '',
+      role:      'user',
+      sosBalance: 0,
+      escrowSOS:  0,
+      createdAt:  serverTimestamp()
+    });
+  } else if (cred.user.photoURL && !snap.data().photoURL) {
+    // Save Google profile photo if not already set
+    await updateDoc(userRef, { photoURL: cred.user.photoURL });
+  }
+  window.location.replace('dashboard.html');
 }
 
 // ── 13. PASSWORD RESET ─────────────────────────────────────
@@ -365,6 +418,7 @@ async function handleLogout() {
     currentUserData = null;
     window._ematch_uid      = null;
     window._ematch_userdata = null;
+
     localStorage.removeItem('ematch_user_cache');
     // Then sign out from Firebase
     await signOut(auth);
@@ -645,6 +699,126 @@ async function joinMatch(matchId, stakeAmount, inGameUsername) {
 }
 window.joinMatchGlobal = joinMatch;
 
+// ── 19b. GAME SETTINGS CACHE ───────────────────────────────
+let _gameSettings = null; // { games: [{id, name, emoji, active}], stakePresets:[], minStake, maxStake }
+
+async function loadGameSettings() {
+  if (_gameSettings) return _gameSettings;
+  try {
+    const snap = await getDoc(doc(db, 'game_settings', 'config'));
+    if (snap.exists()) {
+      _gameSettings = snap.data();
+    }
+  } catch(e) { console.warn('loadGameSettings:', e.message); }
+  // Fallback defaults hadduu Firestore-ka waxba ku jirin
+  if (!_gameSettings) {
+    _gameSettings = {
+      games: [
+        { id:'FC Mobile',    name:'FC Mobile',    emoji:'⚽', active:true },
+        { id:'FIFA',         name:'FIFA',          emoji:'⚽', active:true },
+        { id:'eFootball',    name:'eFootball',     emoji:'⚽', active:true },
+        { id:'NBA 2K',       name:'NBA 2K',        emoji:'🏀', active:true },
+        { id:'PUBG',         name:'PUBG Mobile',   emoji:'🔫', active:true },
+        { id:'Free Fire',    name:'Free Fire',     emoji:'🔫', active:true },
+        { id:'COD',          name:'COD Mobile',    emoji:'🔫', active:true },
+      ],
+      stakePresets: [10000, 25000, 50000, 100000],
+      minStake: 8000,
+      maxStake: 0 // 0 = xad la'aan
+    };
+  }
+  return _gameSettings;
+}
+
+async function initCreateModal() {
+  const settings = await loadGameSettings();
+  const games    = (settings.games || []).filter(g => g.active !== false);
+  const grid     = document.getElementById('cm-games-grid');
+  const stakeEl  = document.getElementById('cm_stake');
+  const rangeLbl = document.getElementById('cm-stake-range');
+  const stakeBtn = document.getElementById('cm-stake-btns');
+
+  // Render game buttons
+  if (grid) {
+    grid.innerHTML = games.map(g => `
+      <button type="button" class="cm-game-btn" data-game="${g.id}"
+        onclick="cmSelectGame('${g.id}','${g.emoji}','${g.name}')">
+        <span class="cm-game-emoji">${g.emoji}</span>
+        <span>${g.name}</span>
+      </button>`).join('') || '<p style="color:var(--text-muted);text-align:center;grid-column:1/-1;padding:16px">Wax game ah ma jiro</p>';
+  }
+
+  // Stake range label
+  const min = settings.minStake || 8000;
+  const max = settings.maxStake || 0;
+  if (rangeLbl) rangeLbl.textContent = max > 0
+    ? `(${(min/1000).toFixed(0)}K – ${(max/1000).toFixed(0)}K SOS)`
+    : `(Min: ${(min/1000).toFixed(0)}K SOS)`;
+
+  // Quick stake buttons
+  const presets = settings.stakePresets || [10000, 25000, 50000, 100000];
+  if (stakeBtn) {
+    stakeBtn.innerHTML = presets.map(p =>
+      `<button type="button" class="cm-stake-pill" data-stake="${p}"
+        onclick="cmSelectStake(${p},this)">${p>=1000000?(p/1000000).toFixed(1)+'M':p>=1000?(p/1000).toFixed(0)+'K':p} SOS</button>`
+    ).join('');
+  }
+
+  // Set min attribute on input
+  if (stakeEl) {
+    stakeEl.min  = min;
+    stakeEl.placeholder = `Min: ${(min/1000).toFixed(0)}K SOS`;
+    if (max > 0) stakeEl.max = max;
+  }
+
+  // Reset selections
+  document.getElementById('cm_platform').value = '';
+  const headerIcon = document.getElementById('cm-header-icon');
+  if (headerIcon) headerIcon.textContent = '🎮';
+  const subTitle = document.getElementById('cm-subtitle-text');
+  if (subTitle) subTitle.textContent = 'Platform dooro si aad u bilowdo';
+  document.getElementById('cm-prize-preview').style.display = 'none';
+  document.querySelectorAll('.cm-game-btn').forEach(b => b.classList.remove('selected'));
+  document.querySelectorAll('.cm-stake-pill').forEach(b => b.classList.remove('selected'));
+  if (stakeEl) stakeEl.value = '';
+}
+
+window.cmSelectGame = function(gameId, emoji, name) {
+  document.getElementById('cm_platform').value = gameId;
+  document.querySelectorAll('.cm-game-btn').forEach(b =>
+    b.classList.toggle('selected', b.dataset.game === gameId));
+  const icon = document.getElementById('cm-header-icon');
+  if (icon) { icon.textContent = emoji; icon.style.filter = 'drop-shadow(0 0 16px rgba(0,230,118,.6))'; }
+  const sub = document.getElementById('cm-subtitle-text');
+  if (sub) sub.textContent = name + ' — Match abuur';
+  const err = document.getElementById('cm_platform_err');
+  if (err) err.textContent = '';
+};
+
+window.cmSelectStake = function(amount, el) {
+  const input = document.getElementById('cm_stake');
+  if (input) { input.value = amount; input.dispatchEvent(new Event('input')); }
+  document.querySelectorAll('.cm-stake-pill').forEach(b => b.classList.remove('selected'));
+  el.classList.add('selected');
+};
+
+function updatePrizePreview() {
+  const stake   = parseInt(document.getElementById('cm_stake')?.value) || 0;
+  const preview = document.getElementById('cm-prize-preview');
+  const stakeEl = document.getElementById('cm-prize-stake');
+  const winEl   = document.getElementById('cm-prize-win');
+  if (!preview) return;
+  if (stake < 1) { preview.style.display = 'none'; return; }
+  preview.style.display = '';
+  const fmt = window.sosFormat || (n => n.toLocaleString());
+  if (stakeEl) stakeEl.textContent = fmt(stake) + ' SOS';
+  if (winEl)   winEl.textContent   = fmt(stake * 2) + ' SOS';
+  // Deselect stake pills if manual input
+  const anyMatch = [...document.querySelectorAll('.cm-stake-pill')]
+    .some(b => parseInt(b.dataset.stake) === stake);
+  if (!anyMatch) document.querySelectorAll('.cm-stake-pill').forEach(b => b.classList.remove('selected'));
+}
+
 // ── 20. CREATE MATCH ───────────────────────────────────────
 async function handleCreateMatch(e) {
   e.preventDefault();
@@ -655,10 +829,17 @@ async function handleCreateMatch(e) {
   const username    = document.getElementById('cm_username')?.value.trim() || '';
   const btn         = document.getElementById('btn_create_match');
   clearErrors('create-match-form');
+
+  // Load settings for validation
+  const settings = await loadGameSettings();
+  const minStake = settings.minStake || 8000;
+  const maxStake = settings.maxStake || 0;
+
   let valid = true;
-  if (!platform)        { showError('cm_platform', 'Platform dooro'); valid = false; }
-  if (!username)        { showError('cm_username', 'Game-ka magacaaga geli'); valid = false; }
-  if (stakeAmount < 8000) { showError('cm_stake', 'Ugu yaraan 8 kun SOS (≈ $0.25)'); valid = false; }
+  if (!platform)   { showError('cm_platform', 'Game dooro'); valid = false; }
+  if (!username)   { showError('cm_username', 'Game-ka magacaaga geli'); valid = false; }
+  if (stakeAmount < minStake) { showError('cm_stake', `Ugu yaraan ${(minStake/1000).toFixed(0)}K SOS`); valid = false; }
+  if (maxStake > 0 && stakeAmount > maxStake) { showError('cm_stake', `Ugu badan ${(maxStake/1000).toFixed(0)}K SOS`); valid = false; }
   if ((currentUserData?.sosBalance||0) < stakeAmount) { showError('cm_stake', 'Lacag kuma filna'); valid = false; }
   if (!valid) return;
   setLoading(btn, true);
@@ -721,14 +902,26 @@ async function setMatchWinner(matchId, winnerUid, m) {
 
 window.analyzeScreenshot = async function(matchId, file, myUid) {
   if (!file || !requireOnline()) return;
-  showToast('📸 AI screenshot-ka falanqaynaya...', 'info');
+  showToast('📤 Screenshot-ka la soo gelayaa...', 'info');
   try {
+    // 1. Upload to imgbb first
+    let imgData = null;
+    try {
+      imgData = await uploadToImgbb(file, `match_${matchId}_${Date.now()}`);
+    } catch(uploadErr) {
+      console.warn('imgbb upload failed, continuing without URL:', uploadErr.message);
+    }
+
+    // 2. Convert to base64 for AI analysis
     const base64 = await new Promise((res, rej) => {
       const reader = new FileReader();
       reader.onload  = () => res(reader.result.split(',')[1]);
       reader.onerror = () => rej(new Error('File akhrinta ku guuldareysatay'));
       reader.readAsDataURL(file);
     });
+
+    showToast('🤖 AI screenshot-ka falanqaynaya...', 'info');
+
     const mSnap = await getDoc(doc(db, 'matches', matchId));
     if (!mSnap.exists()) { showToast('Match la ma helin', 'error'); return; }
     const m          = mSnap.data();
@@ -738,6 +931,8 @@ window.analyzeScreenshot = async function(matchId, file, myUid) {
     const oppUid      = isCreator ? m.joinedBy : m.createdBy;
     if (m.status !== 'locked') { showToast('Match live ma ahan', 'error'); return; }
     if (m.winnerId)             { showToast('Winner horey la dejiyay', 'error'); return; }
+
+    // 3. AI analysis
     const response = await fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -752,8 +947,20 @@ window.analyzeScreenshot = async function(matchId, file, myUid) {
     const data   = await response.json();
     const raw    = data.content?.[0]?.text || '{}';
     const result = JSON.parse(raw.replace(/```json|```/g, '').trim());
+
+    // 4. Save screenshot URL + AI result to match doc
+    const screenshotPatch = {
+      'result.screenshotBy':  myUid,
+      'result.screenshotUrl': imgData?.url   || null,
+      'result.screenshotThumb': imgData?.thumb || null,
+      'result.aiResult':      result,
+      'result.analyzedAt':    serverTimestamp()
+    };
+
     if (result.confidence === 'high' && result.winner !== 'unclear') {
       const winnerUid = result.winner === 'player1' ? myUid : oppUid;
+      // Save screenshot url before finalizing
+      await updateDoc(doc(db, 'matches', matchId), screenshotPatch);
       await setMatchWinner(matchId, winnerUid, m);
       const isIWon = winnerUid === myUid;
       showToast(isIWon ? '🏆 Adaa guuleystay! SOS la siiyay!' : '💸 Waan khasaaray. Ciyaarta xiga!', isIWon ? 'success' : 'error');
@@ -761,11 +968,13 @@ window.analyzeScreenshot = async function(matchId, file, myUid) {
       await loadUserData(currentUser.uid);
     } else {
       await updateDoc(doc(db, 'matches', matchId), {
+        ...screenshotPatch,
         status: 'dispute', 'result.dispute': true,
-        'result.screenshotBy': myUid, 'result.aiResult': result
       });
       await setDoc(doc(collection(db, 'disputes')), {
-        matchId, submittedBy: myUid, aiResult: result, createdAt: serverTimestamp()
+        matchId, submittedBy: myUid,
+        screenshotUrl: imgData?.url || null,
+        aiResult: result, createdAt: serverTimestamp()
       });
       showToast("⚠️ Screenshot-ka cad ma ahayn — Admin ayaa go'aan qaadanaya", 'warning');
       closeModal('match-modal');
@@ -1072,6 +1281,22 @@ function fillProfileUI() {
   const editPhone = document.getElementById('edit_phone');
   if (editName)  editName.placeholder  = u.fullName || 'Magacaaga cusub';
   if (editPhone) editPhone.placeholder = u.phone    || '+252...';
+
+  // ── Admin Tools section visibility ──────────────────────
+  const adminRoles = ['owner','administrator','partner_manager','support','agent'];
+  const isAdmin    = adminRoles.includes(u.role);
+  const adminSection = document.getElementById('admin-menu-section');
+  if (adminSection) adminSection.classList.toggle('hidden', !isAdmin);
+
+  // Admin Dashboard — owner + administrator only
+  const canSeeAdminDash = ['owner','administrator'].includes(u.role);
+  document.querySelectorAll('.settings-item.admin-only').forEach(el => {
+    el.classList.toggle('hidden', !canSeeAdminDash);
+  });
+
+  // User Management — owner only
+  const userMgmtEl = document.getElementById('menu_admin_users');
+  if (userMgmtEl) userMgmtEl.classList.toggle('hidden', u.role !== 'owner');
 }
 
 // ── 30. MAIN DOMContentLoaded ──────────────────────────────
@@ -1089,6 +1314,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // INDEX.HTML — Login / Register
   // ════════════════════════════════════════════════════════
   if (page === 'index.html' || page === '') {
+    // Handle Google redirect result first (after signInWithRedirect returns)
+    try {
+      const redirectCred = await getRedirectResult(auth);
+      if (redirectCred?.user) {
+        await _handleGoogleCred(redirectCred);
+        return;
+      }
+    } catch(e) {
+      if (e.code !== 'auth/no-current-user')
+        showToast('Google sign-in khalad: ' + e.message, 'error');
+    }
     // authGuard(false) → if user logged in, redirects to dashboard and returns user obj
     // if no user, returns null and we show login page
     const user = await authGuard(false, 'dashboard.html');
@@ -1097,8 +1333,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     initPasswordToggles();
     document.getElementById('login-form')    ?.addEventListener('submit', handleLogin);
     document.getElementById('register-form') ?.addEventListener('submit', handleSignup);
-    document.getElementById('btn_google')    ?.addEventListener('click',  handleGoogleSignIn);
-    document.getElementById('btn_forgot_pw') ?.addEventListener('click',  window.handlePasswordReset);
+    document.getElementById('btn_google')     ?.addEventListener('click',  handleGoogleSignIn);
+    document.getElementById('btn_google_reg') ?.addEventListener('click',  handleGoogleSignIn);
+    document.getElementById('btn_forgot_pw')  ?.addEventListener('click',  window.handlePasswordReset);
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
         const tab = btn.dataset.tab;
@@ -1119,13 +1356,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const matchesContainer = document.getElementById('matches-list');
     loadMatches(matchesContainer, 'all');
     initFilterChips(matchesContainer);
-    document.getElementById('btn_open_create')  ?.addEventListener('click',  () => openModal('create-match-modal'));
+    document.getElementById('btn_open_create')  ?.addEventListener('click',  () => { _gameSettings = null; openModal('create-match-modal'); initCreateModal(); });
     document.getElementById('create-match-form') ?.addEventListener('submit', handleCreateMatch);
+    // Prize preview live update
+    document.getElementById('cm_stake')?.addEventListener('input', updatePrizePreview);
     document.getElementById('btn_logout')        ?.addEventListener('click',  handleLogout);
     loadDepositRequests(document.getElementById('admin-deposits-container'));
     const pendingJoin = localStorage.getItem('pending_join');
     if (pendingJoin) { localStorage.removeItem('pending_join'); setTimeout(() => openMatchModal(pendingJoin), 600); }
-    if (localStorage.getItem('open_create') === '1') { localStorage.removeItem('open_create'); setTimeout(() => openModal('create-match-modal'), 400); }
+    if (localStorage.getItem('open_create') === '1') { localStorage.removeItem('open_create'); setTimeout(() => { _gameSettings = null; openModal('create-match-modal'); initCreateModal(); }, 400); }
     return;
   }
 
@@ -1182,6 +1421,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (snap.exists()) {
         currentUserData = snap.data(); window._ematch_userdata = currentUserData;
         updateHeaderUI();
+        // Re-run fillProfileUI so role-based sections (Admin Tools, User Management) always update
+        fillProfileUI();
         const fmt = window.sosFormat || (n => n.toLocaleString());
         const statCoins  = document.getElementById('stat-coins');
         const statEscrow = document.getElementById('stat-escrow');

@@ -1326,27 +1326,28 @@ let _pushUnsubscribe = null;
 
 function startPushListener(uid) {
   if (_pushUnsubscribe) _pushUnsubscribe();
-  // Only listen to alerts created after page load
-  const since = new Date();
+  // Listen to ALL active push alerts — filter seen ones client-side
   _pushUnsubscribe = onSnapshot(
     query(
       collection(db, 'push_alerts'),
-      where('active', '==', true),
-      orderBy('createdAt', 'desc'),
-      limit(5)
+      limit(10)
     ),
     snap => {
       snap.docChanges().forEach(change => {
         if (change.type !== 'added') return;
         const id = change.doc.id;
         const a  = change.doc.data();
-        // Skip if already seen or older than page load
+        // Skip inactive
+        if (a.active === false) return;
+        // Skip if already seen
         if (_pushSeenIds.has(id)) return;
-        const ts = a.createdAt?.toDate?.();
-        if (ts && ts < since) return;
-        // Mark as seen
+        // Mark as seen immediately
         _pushSeenIds.add(id);
         try { localStorage.setItem('_pushSeen', JSON.stringify([..._pushSeenIds].slice(-50))); } catch(e){}
+        // Only show popup for alerts sent within last 2 minutes
+        const ts = a.createdAt?.toDate?.();
+        const age = ts ? (Date.now() - ts.getTime()) : 0;
+        if (age > 120000) return; // older than 2 min → skip (already loaded ones)
         showPushPopup(a);
       });
     },

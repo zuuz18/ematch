@@ -620,31 +620,6 @@
         </div>
       </div>
 
-      <!-- ── Admin Section ──────────────────────────────── -->
-      <div id="admin-menu-section" class="hidden admin-only mb-md">
-        <div class="section-label" style="color:var(--accent-red)">🛡️ Admin Tools</div>
-        <div class="settings-list">
-          <!-- Dashboard -->
-          <div class="settings-item admin-only hidden" onclick="window.location.href='admin.html'">
-            <div class="settings-icon" style="background:rgba(239,68,68,.1)">📊</div>
-            <div class="settings-text">
-              <div class="settings-title">Admin Dashboard</div>
-              <div class="settings-sub">Deposit requests, disputes</div>
-            </div>
-            <svg class="settings-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-          <!-- User Management — owner kaliya -->
-          <div class="settings-item hidden" id="menu_admin_users" onclick="window.location.href='users.html'" style="cursor:pointer">
-            <div class="settings-icon" style="background:rgba(255,215,0,.08)">👥</div>
-            <div class="settings-text">
-              <div class="settings-title">User Management</div>
-              <div class="settings-sub">Users raadi, role bedel, balance hagaaji</div>
-            </div>
-            <span style="background:rgba(239,68,68,.15);color:var(--accent-red);font-size:9px;font-weight:800;padding:3px 7px;border-radius:var(--r-full);text-transform:uppercase;margin-right:6px">ADMIN</span>
-            <svg class="settings-chevron" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
-          </div>
-        </div>
-      </div>
 
       <!-- ── Danger Zone ────────────────────────────────── -->
       <div class="section-label" style="color:var(--accent-red)">⚠️ Danger Zone</div>
@@ -905,8 +880,8 @@
     set('info-phone', u.phone || 'La ma gelin');
     if (u.phone) document.getElementById('phone-check')?.style && (document.getElementById('phone-check').style.display='block');
     set('profile-uid-display', 'UID: ' + (u.uid||'').slice(0,14) + '...');
-    const avEl = document.getElementById('profile-avatar-display');
-    if (avEl) avEl.textContent = initials;
+    const avInitialsEl = document.getElementById('profile-avatar-display');
+    if (avInitialsEl) avInitialsEl.textContent = initials;
     if (u.createdAt?.toDate) set('info-createdat', u.createdAt.toDate().toLocaleDateString('so-SO'));
 
     // Role badge
@@ -925,22 +900,6 @@
     }
 
     updateCompletion(u);
-
-    // ── Show / hide Admin Tools section ───────────────────
-    const adminRoles = ['owner','administrator','partner_manager','support','agent'];
-    const isAdmin    = adminRoles.includes(u.role);
-    const adminSection = document.getElementById('admin-menu-section');
-    if (adminSection) adminSection.classList.toggle('hidden', !isAdmin);
-
-    // Admin Dashboard — owner + administrator kaliya
-    const canSeeAdminDash = ['owner','administrator'].includes(u.role);
-    document.querySelectorAll('.settings-item.admin-only').forEach(el => {
-      el.classList.toggle('hidden', !canSeeAdminDash);
-    });
-
-    // User Management — owner kaliya
-    const userMgmtEl = document.getElementById('menu_admin_users');
-    if (userMgmtEl) userMgmtEl.classList.toggle('hidden', u.role !== 'owner');\n
 
     // ── Avatar / photo display ─────────────────────────────
     const avEl = document.getElementById('profile-avatar-display');
@@ -1112,7 +1071,7 @@
         <div class="um-user-card" onclick="umOpenDetail('${u.uid}')">
           <div class="um-avatar" style="${u.role==='owner'?'background:linear-gradient(135deg,#ffd700,#ff6b00)':''}">${initials}</div>
           <div class="um-info">
-            <div class="um-name">${u.fullName || 'Magac la'aan'}</div>
+            <div class="um-name">${u.fullName || "Magac la'aan"}</div>
             <div class="um-email">${u.email || u.phone || (u.uid ? u.uid.slice(0,16)+'...' : '')}</div>
           </div>
           <span class="um-badge ${badgeCls}">${roleLabel(u.role)}</span>
@@ -1455,10 +1414,6 @@
       if (window.handleLogout) window.handleLogout();
     });
 
-    // User Management button
-    document.getElementById('menu_admin_users')?.addEventListener('click', () => {
-      window.location.href = 'users.html';
-    });
 
     // Modal overlay close
     document.querySelectorAll('.modal-overlay').forEach(o => {

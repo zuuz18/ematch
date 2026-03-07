@@ -160,68 +160,6 @@
       </div>
     </div>
 
-    <!-- ── Admin Panel (hidden — role check by JS) ────── -->
-    <div id="admin-panel" class="p-md hidden admin-only">
-      <div class="admin-section">
-        <div class="flex items-center justify-between mb-md">
-          <h3>⚙️ Admin Panel</h3>
-          <span class="admin-badge">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12"
-              viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
-            </svg>
-            ADMIN
-          </span>
-        </div>
-
-        <!-- Deposit Requests -->
-        <p style="font-size:13px;color:var(--text-muted);margin-bottom:var(--sp-md)">
-          💰 Deposit requests sugaya ogolashada:
-        </p>
-        <div id="admin-deposits-container">
-          <p class="text-muted" style="font-size:13px">Loading...</p>
-        </div>
-
-        <!-- Match Management -->
-        <div style="margin-top:var(--sp-lg);padding-top:var(--sp-md);border-top:1px solid var(--glass-border)">
-          <p style="font-size:13px;color:var(--text-muted);margin-bottom:var(--sp-sm)">
-            🎮 Match management — winner set garee:
-          </p>
-          <div class="grid-2">
-            <input
-              type="text"
-              id="admin_match_id"
-              placeholder="Match ID"
-              style="font-size:13px;min-height:40px"
-              aria-label="Match ID">
-            <input
-              type="text"
-              id="admin_winner_uid"
-              placeholder="Winner UID"
-              style="font-size:13px;min-height:40px"
-              aria-label="Winner UID">
-          </div>
-          <button
-            class="btn btn-gold mt-sm"
-            style="min-height:40px;font-size:13px"
-            onclick="adminSetWinnerFromInputs()"
-            aria-label="Winner dejii">
-            🏆 Winner Dejii
-          </button>
-        </div>
-
-        <!-- Logout (Admin shortcut) -->
-        <div style="margin-top:var(--sp-lg);padding-top:var(--sp-md);border-top:1px solid var(--glass-border)">
-          <button
-            id="btn_logout"
-            class="btn btn-ghost"
-            style="min-height:40px;font-size:13px"
-            aria-label="Ka bax">
-            🚪 Ka Bax
-          </button>
-        </div>
-      </div>
-    </div>
 
     <!-- ── Logout (non-admin, shown in profile usually) ─ -->
     <div class="p-md hidden" id="logout-section-user">
@@ -468,23 +406,6 @@
 <script src="js/nav.js"></script>
 <script type="module" src="js/app.js"></script>
 
-<!-- Admin helper (inline — needs global scope) -->
-<script>
-  function adminSetWinnerFromInputs() {
-    const matchId   = document.getElementById('admin_match_id')?.value.trim();
-    const winnerUid = document.getElementById('admin_winner_uid')?.value.trim();
-    if (!matchId || !winnerUid) {
-      alert('Match ID iyo Winner UID labadaba geli');
-      return;
-    }
-    // adminSetWinner is exposed globally from app.js
-    if (typeof adminSetWinner === 'function') {
-      adminSetWinner(matchId, winnerUid);
-    } else {
-      alert('JS weli load ma ahan — dib u isku day');
-    }
-  }
-</script>
 
 </body>
 </html>

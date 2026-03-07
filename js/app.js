@@ -277,13 +277,6 @@ function updateHeaderUI() {
     document.querySelectorAll(".avatar").forEach(a => { a.textContent = initials; });
   }
 
-  // Admin visibility
-  const adminRoles = ["administrator", "owner", "partner_manager"];
-  if (adminRoles.includes(currentUserData.role)) {
-    document.querySelectorAll(".admin-only").forEach(el => el.classList.remove("hidden"));
-    const adminPanel = document.getElementById("admin-panel");
-    if (adminPanel) adminPanel.classList.remove("hidden");
-  }
 }
 
 // ── 10. SIGNUP ─────────────────────────────────────────────
@@ -1117,103 +1110,6 @@ function loadTransactionHistory(container) {
   });
 }
 
-// ── 24. ADMIN: LOAD DEPOSIT REQUESTS ──────────────────────
-function loadDepositRequests(container) {
-  if (!container) return;
-  const adminRoles = ['administrator','owner','partner_manager'];
-  if (!adminRoles.includes(currentUserData?.role)) return;
-  const q = query(collection(db,'deposit_requests'), where('status','==','pending'), orderBy('createdAt','desc'), limit(20));
-  onSnapshot(q, snap => {
-    const fmt = window.sosFormat || (n => n.toLocaleString());
-    if (snap.empty) { container.innerHTML = `<p class="text-muted" style="font-size:13px">✅ Pending requests ma jiro</p>`; return; }
-    container.innerHTML = snap.docs.map(d => {
-      const r = d.data();
-      return `
-        <div class="deposit-req-card">
-          <div class="deposit-req-meta">
-            <span class="deposit-req-coins">${fmt(r.sosAmount||0)} SOS</span>
-            <span class="pending-badge">Sugaysa</span>
-          </div>
-          <div style="font-size:13px;color:var(--text-secondary);margin-bottom:4px">
-            💵 $${r.amountUSD} · ${r.company} · ${r.phoneSentFrom}
-          </div>
-          <div style="font-size:11px;color:var(--text-muted);font-family:monospace;margin-bottom:10px;word-break:break-all">
-            ${r.ussdCode}
-          </div>
-          <div class="grid-2">
-            <button class="btn btn-primary btn-sm" onclick="adminApproveDeposit('${d.id}','${r.userId}',${r.sosAmount})">✅ Ogolow</button>
-            <button class="btn btn-danger btn-sm"  onclick="adminRejectDeposit('${d.id}')">❌ Diid</button>
-          </div>
-        </div>`;
-    }).join('');
-  });
-}
-
-// ── 25. ADMIN: APPROVE DEPOSIT ─────────────────────────────
-window.adminApproveDeposit = async function(reqId, userId, sosAmount) {
-  const fmt = window.sosFormat || (n => n.toLocaleString());
-  if (!confirm(`✅ Deposit ogolaan?\n${fmt(sosAmount)} SOS\n$${(sosAmount/32000).toFixed(2)}`)) return;
-  if (!requireOnline()) return;
-  try {
-    await runTransaction(db, async tx => {
-      const reqRef  = doc(db,'deposit_requests', reqId);
-      const userRef = doc(db,'users', userId);
-      const [rSnap, uSnap] = await Promise.all([tx.get(reqRef), tx.get(userRef)]);
-      if (!rSnap.exists())                   throw new Error('Request la ma helin');
-      if (rSnap.data().status !== 'pending') throw new Error('Horey loo xukumay');
-      tx.update(reqRef,  { status:'approved', reviewedBy: currentUser.uid, reviewedAt: serverTimestamp() });
-      tx.update(userRef, { sosBalance: (uSnap.data().sosBalance||0) + sosAmount });
-      tx.set(doc(collection(db,'transactions')), { userId, type:'deposit_approved', sos: sosAmount, relatedMatch: null, createdAt: serverTimestamp(), meta: { reqId, approvedBy: currentUser.uid } });
-      tx.set(doc(collection(db,'adminLogs')),    { action:'approve_deposit', adminUid: currentUser.uid, targetUserId: userId, reqId, sosAmount, createdAt: serverTimestamp() });
-    });
-    showToast('✅ Deposit la ogolaaday! SOS waa la gudbiyay.', 'success');
-  } catch (err) {
-    showToast('Khalad: ' + err.message, 'error');
-  }
-};
-
-window.adminRejectDeposit = async function(reqId) {
-  if (!confirm('❌ Deposit-kan diidid?')) return;
-  if (!requireOnline()) return;
-  try {
-    await updateDoc(doc(db,'deposit_requests', reqId), { status:'rejected', reviewedBy: currentUser.uid, reviewedAt: serverTimestamp() });
-    await addDoc(collection(db,'adminLogs'), { action:'reject_deposit', adminUid: currentUser.uid, reqId, createdAt: serverTimestamp() });
-    showToast('Deposit la diidiy', 'info');
-  } catch (err) {
-    showToast('Khalad: ' + err.message, 'error');
-  }
-};
-
-// ── 26. ADMIN: SET WINNER ──────────────────────────────────
-window.adminSetWinner = async function(matchId, winnerUid) {
-  if (!confirm(`🏆 Winner set garee?\nUID: ${winnerUid.slice(0,16)}...`)) return;
-  if (!requireOnline()) return;
-  try {
-    await runTransaction(db, async tx => {
-      const matchRef  = doc(db,'matches', matchId);
-      const matchSnap = await tx.get(matchRef);
-      if (!matchSnap.exists()) throw new Error('Match la ma helin');
-      const m = matchSnap.data();
-      if (m.status !== 'locked') throw new Error('Match weli locked ma ahan');
-      if (m.winnerId)            throw new Error('Winner horey ayaa la dejiyay');
-      if (!m.joinedBy)           throw new Error('Labo ciyaartoy ma jiraan weli');
-      const loserUid  = winnerUid === m.createdBy ? m.joinedBy : m.createdBy;
-      const prize     = (m.stakeAmount||0) * 2;
-      const winnerRef = doc(db,'users', winnerUid);
-      const loserRef  = doc(db,'users', loserUid);
-      const [wSnap, lSnap] = await Promise.all([tx.get(winnerRef), tx.get(loserRef)]);
-      tx.update(matchRef,  { winnerId: winnerUid, status:'done', completedAt: serverTimestamp() });
-      tx.update(winnerRef, { sosBalance: (wSnap.data().sosBalance||0) + prize, escrowSOS: Math.max(0,(wSnap.data().escrowSOS||0) - m.stakeAmount) });
-      tx.update(loserRef,  { escrowSOS: Math.max(0,(lSnap.data().escrowSOS||0) - m.stakeAmount) });
-      tx.set(doc(collection(db,'transactions')), { userId: winnerUid, type:'match_win',  sos: +prize,         relatedMatch: matchId, createdAt: serverTimestamp(), meta: { matchId, loserUid } });
-      tx.set(doc(collection(db,'transactions')), { userId: loserUid,  type:'match_loss', sos: -m.stakeAmount, relatedMatch: matchId, createdAt: serverTimestamp(), meta: { matchId, winnerUid } });
-      tx.set(doc(collection(db,'adminLogs')),    { action:'set_winner', adminUid: currentUser.uid, matchId, winnerUid, loserUid, prize, createdAt: serverTimestamp() });
-    });
-    showToast('🏆 Winner la dejiyay! SOS waa la qaybiyay.', 'success');
-  } catch (err) {
-    showToast('Khalad: ' + err.message, 'error');
-  }
-};
 
 // ── 27. FILTER CHIPS ───────────────────────────────────────
 function initFilterChips(matchesContainer) {
@@ -1286,21 +1182,6 @@ function fillProfileUI() {
   if (editName)  editName.placeholder  = u.fullName || 'Magacaaga cusub';
   if (editPhone) editPhone.placeholder = u.phone    || '+252...';
 
-  // ── Admin Tools section visibility ──────────────────────
-  const adminRoles = ['owner','administrator','partner_manager','support','agent'];
-  const isAdmin    = adminRoles.includes(u.role);
-  const adminSection = document.getElementById('admin-menu-section');
-  if (adminSection) adminSection.classList.toggle('hidden', !isAdmin);
-
-  // Admin Dashboard — owner + administrator only
-  const canSeeAdminDash = ['owner','administrator'].includes(u.role);
-  document.querySelectorAll('.settings-item.admin-only').forEach(el => {
-    el.classList.toggle('hidden', !canSeeAdminDash);
-  });
-
-  // User Management — owner only
-  const userMgmtEl = document.getElementById('menu_admin_users');
-  if (userMgmtEl) userMgmtEl.classList.toggle('hidden', u.role !== 'owner');
 }
 
 // ── 30. MAIN DOMContentLoaded ──────────────────────────────
@@ -1334,8 +1215,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     initPasswordToggles();
     document.getElementById('login-form')    ?.addEventListener('submit', handleLogin);
     document.getElementById('register-form') ?.addEventListener('submit', handleSignup);
-    document.getElementById('btn_google')     ?.addEventListener('click',  handleGoogleSignIn);
-    document.getElementById('btn_google_reg') ?.addEventListener('click',  handleGoogleSignIn);
+
     document.getElementById('btn_forgot_pw')  ?.addEventListener('click',  window.handlePasswordReset);
     document.querySelectorAll('.tab-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -1362,7 +1242,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Prize preview live update
     document.getElementById('cm_stake')?.addEventListener('input', updatePrizePreview);
     document.getElementById('btn_logout')        ?.addEventListener('click',  handleLogout);
-    loadDepositRequests(document.getElementById('admin-deposits-container'));
     const pendingJoin = localStorage.getItem('pending_join');
     if (pendingJoin) { localStorage.removeItem('pending_join'); setTimeout(() => openMatchModal(pendingJoin), 600); }
     if (localStorage.getItem('open_create') === '1') { localStorage.removeItem('open_create'); setTimeout(() => { _gameSettings = null; openModal('create-match-modal'); initCreateModal(); }, 400); }
@@ -1480,23 +1359,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       const uid = currentUser?.uid;
       if (uid) navigator.clipboard.writeText(uid).then(() => showToast('✅ UID la koobiyay!','success')).catch(() => showToast('Koobiyaynta waa fashilantay','error'));
     };
-    return;
-  }
-
-  // ════════════════════════════════════════════════════════
-  // ADMIN.HTML
-  // ════════════════════════════════════════════════════════
-  if (page === 'admin.html') {
-    await authGuard(true);
-    const adminRoles = ['administrator','owner','partner_manager'];
-    if (!adminRoles.includes(currentUserData?.role)) {
-      showToast('Admin access ma lihid', 'error');
-      setTimeout(() => window.location.replace('dashboard.html'), 1500);
-      return;
-    }
-    onSnapshot(doc(db,'users', currentUser.uid), snap => {
-      if (snap.exists()) { currentUserData = snap.data(); window._ematch_userdata = currentUserData; updateHeaderUI(); }
-    });
     return;
   }
 
